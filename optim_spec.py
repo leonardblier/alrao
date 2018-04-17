@@ -117,6 +117,7 @@ class SGDSpec:
                     grad = state['mom_buffer']
             """
 
+            # There should not be 2 searchs in the model for this
             if p1 in self.named_lr:
                 wd = self.named_lr[p1]
                 p2.data.addcmul_(-1, grad, wd)

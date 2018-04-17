@@ -4,7 +4,11 @@ import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 
+#TODO : Let choose the hyperparameters of the switch !
 class Switch(nn.Module):
+    """
+    This class implements the switch distribution
+    """
     def __init__(self, nb_models, theta = .1):
         super(Switch, self).__init__()
 
@@ -18,6 +22,11 @@ class Switch(nn.Module):
         self.nll = nn.NLLLoss()
 
     def Supdate(self, lst_x, y):
+        """
+        This implements algorithm 1 in "Catching Up Faster in Bayesian 
+        Model Selection and Model Averaging
+        """
+        # Possible to do this in one line ?
         lst_px = [None] * len(lst_x)
         for i in range(self.nb_models):
             lst_px[i] = math.exp(-self.nll(lst_x[i], y).data[0])
@@ -43,6 +52,7 @@ class Switch(nn.Module):
             _, i_max = torch.max(self.posterior, 0)
             return lst_x[i_max[0]]
         else:
+            # Why is this so complicated ?
             ret = Parameter(lst_x[0].data.new().resize_as_(lst_x[0].data).zero_(), requires_grad = False)
             for i in range(self.nb_models):
                 ret += lst_x[i] * self.posterior[i]
