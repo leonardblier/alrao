@@ -46,6 +46,7 @@ class Switch(nn.Module):
             self.posterior = self.w_a + self.w_b
 
             self.t += 1
+        print(("Switch : "+"{:.3f}, "*self.nb_models).format( *(x for x in self.posterior)))
 
     def forward(self, lst_x):
         if not self.training:

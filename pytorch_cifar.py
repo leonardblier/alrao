@@ -90,15 +90,17 @@ train_loader, train_loader_seq, valid_loader, test_loader = \
 classes = ('plane', 'car', 'bird', 'cat', \
     'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-# Momentum (unused)
-mom_min = 0
-mom_max = .99
 
 # Define the way the hyperparameters are generated
 f_lr = fdet_lr_log(args.minLR, args.maxLR) if args.mLR else fdet_lr_unif # learning rate
 f_mom = fdet_mom_id # momentum (unused)
 
 # Neural Network Model
+
+   
+            
+    
+        
 class Net(nn.Module):
     def __init__(self, net_sizes, nb_switch, args = None):
         super(Net, self).__init__()
@@ -243,6 +245,7 @@ class Net(nn.Module):
 
         return self.switch(self.lst_x)
 
+    
     def forward(self, x):
         if bnArgs['type'] != 'None': x = self.bnCV00(x)
         x = self.conv00(x)

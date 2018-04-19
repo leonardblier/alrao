@@ -1,13 +1,15 @@
 import os
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import math
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
+import pdb
 r"""
 These optimizers are copies of the original pytorch optimizers with one change:
-    They take 2 specific arguments: named_params (instead of params) and named_lr.
-    While looping over the dictionary named_params, these optimizers check whether
+    They take 2 specific arguments: named_parameters (instead of params) and named_lr.
+    While looping over the dictionary named_parameters, these optimizers check whether
     the name of the current layer is in named_lr. If not, the optimization is
     exaclty the same as in the original optimizer. If it is the case, it looks
     into named_lr and take the tensor of specific learning rates associated to
@@ -15,16 +17,16 @@ These optimizers are copies of the original pytorch optimizers with one change:
 """
 
 class AdamSpec:
-    def __init__(self, named_params, named_lr, lr, betas = (.9, .999), eps = 1e-8):
+    def __init__(self, named_parameters, named_lr, lr, betas = (.9, .999), eps = 1e-8):
         self.learning_rate = lr
-        self.named_params = dict(named_params)
+        self.named_parameters = OrderedDict(named_parameters)
         self.named_lr = named_lr
         self.beta1, self.beta2 = betas
         self.state = defaultdict(dict)
         self.epsilon = eps
 
     def step(self):
-        for p1, p2 in self.named_params.items():
+        for p1, p2 in self.named_parameters.items():
             if p2.grad is None:
                 continue
             grad = p2.grad.data
@@ -61,7 +63,7 @@ class AdamSpec:
                 p2.data.addcdiv_(-step_size, exp_avg, denom)
 
     def zero_grad(self):
-        for p1, p2 in self.named_params.items():
+        for p1, p2 in self.named_parameters.items():
             if p2.grad is not None:
                 if p2.grad.volatile:
                     p2.grad.data.zero_()
@@ -69,66 +71,60 @@ class AdamSpec:
                     data = p2.grad.data
                     p2.grad = Variable(data.new().resize_as_(data).zero_())
 
-class SGDSpec:
-    def __init__(self, named_params, named_lr, lr, momentum = 0, weight_decay = 0):
-        self.learning_rate = lr
-        self.named_params = dict(named_params)
-        self.named_lr = named_lr
-        self.momentum = momentum
-        self.weight_decay = weight_decay
-        self.state = defaultdict(dict)
+class SGDSpec(optim.Optimizer):
+    def __init__(self, named_parameters, gen_lr):
+        # TODO : Remove all the names
+        self.named_parameters = OrderedDict(named_parameters)
+        
+        self.named_lr = OrderedDict()
+        for name, p in self.named_parameters.items():
+            p_lr = gen_lr(p)
+            self.named_lr[name] = p_lr   
 
     def step(self):
-        for p1, p2 in self.named_params.items():
-            if p2.grad is None:
+        # TODO : Remove all the names
+        for (namep,p),(namelr, wlr) in zip(self.named_parameters.items(), self.named_lr.items()):
+            assert(namep == namelr)
+            if p.grad is None:
                 continue
-            grad = p2.grad.data
-
-            #state = self.state[p2]
-            state = self.state[p1]
-
-            # State initialization
-            if self.weight_decay != 0:
-                grad.add_(self.weight_decay, p2.data)
-
-            if self.momentum != 0:
-                if 'mom_buffer' not in state:
-                    state['mom_buffer'] = torch.zeros_like(p2.data).add_(grad)
-                else:
-                    state['mom_buffer'].mul_(self.momentum).add_(1 - self.momentum, grad)
-                grad = state['mom_buffer']
-
-            """
-            if p1 in self.named_mom:
-                U_mom = self.named_mom[p1]
-                if len(state) == 0:
-                    state['mom_buffer'] = grad.new().resize_as_(grad).zero_()
-                    state['mom_buffer'].add_(grad)
-                else:
-                    state['mom_buffer'].mul_(U_mom).addcmul_(1 - U_mom, grad)
-                grad = state['mom_buffer']
-            else:
-                if self.momentum != 0:
-                    if len(state) == 0:
-                        state['mom_buffer'] = grad.new().resize_as_(grad).zero_()
-                        state['mom_buffer'].mul_(self.momentum).add_(grad)
-                    else:
-                        state['mom_buffer'].mul_(self.momentum).add_(1 - self.momentum, grad)
-                    grad = state['mom_buffer']
-            """
-
-            # There should not be 2 searchs in the model for this
-            if p1 in self.named_lr:
-                wd = self.named_lr[p1]
-                p2.data.addcmul_(-1, grad, wd)
-            else:
-                p2.data.add_(-self.learning_rate, grad)
+            grad = p.grad.data
+            p.data.addcmul_(-1, grad, wlr)
 
     def zero_grad(self):
-        for p1, p2 in self.named_params.items():
-            if p2.grad is not None:
-                if p2.grad.volatile:
-                    p2.grad.data.zero_()
+        for name, p in self.named_parameters.items():
+            if p.grad is not None:
+                if p.grad.volatile:
+                    p.grad.data.zero_()
                 else:
-                    data = p2.grad.data
-                    p2.grad = Variable(data.new().resize_as_(data).zero_())
+                    data = p.grad.data
+                    p.grad = Variable(data.new().resize_as_(data).zero_())
+
+
+class SGDSwitch(optim.Optimizer):
+    def __init__(self, named_parameters_model, classifiers_parameters_list,
+                 classifiers_lr, gen_lr):
+
+        self.sgdmodel = SGDSpec(named_parameters_model, gen_lr)
+        self.classifiers_lr = classifiers_lr
+        self.sgdclassifiers = [optim.SGD(parameters, lr) for parameters, lr in \
+                               zip(classifiers_parameters_list, classifiers_lr)]
+
+    def update_posterior(self, posterior):
+        self.posterior = posterior
+
+
+    def step(self):
+        self.sgdmodel.step()
+        for sgdclassifier, posterior, lr in zip(self.sgdclassifiers,
+                                                self.posterior, self.classifiers_lr):
+            for param_group in sgdclassifier.param_groups:
+                param_group['lr'] = lr / posterior
+            sgdclassifier.step()
+            
+        
+    def zero_grad(self):
+        self.sgdmodel.zero_grad()
+        for opt in self.sgdclassifiers:
+            opt.zero_grad()
+
+    
