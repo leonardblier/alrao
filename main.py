@@ -20,10 +20,13 @@ import numpy as np
 from models import VGGNet, LinearClassifier
 from switch import Switch
 from optim_spec import SGDSwitch, SGDSpec, generator_lr
+from input import parseArgs
 
 import pdb
 
 torch.manual_seed(123)
+
+args = parseArgs()
 
 use_cuda = torch.cuda.is_available()
 best_acc = 0  # best test accuracy
@@ -33,12 +36,18 @@ batch_size = 64
 
 # Data
 print('==> Preparing data..')
-transform_train = transforms.Compose([
-    transforms.RandomCrop(32, padding=4),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-])
+if args.data_augm:
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+else:
+    transform_train = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
 
 transform_test = transforms.Compose([
     transforms.ToTensor(),
@@ -57,15 +66,15 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 class BigModel(nn.Module):
     def __init__(self, nclassifiers):
         super(BigModel, self).__init__()
-        K = 4
+        K = args.size_multiplier
         self.model = VGGNet(K)
-        self.switch = Switch(nclassifiers)        
+        self.switch = Switch(nclassifiers)
         self.nclassifiers = nclassifiers
-        
+
         for i in range(nclassifiers):
             classifier = LinearClassifier(K*512, 10)
             setattr(self, "classifier"+str(i), classifier)
-            
+
     def forward(self, x):
         x = self.model(x)
         self.last_x = x
@@ -81,7 +90,7 @@ class BigModel(nn.Module):
         else:
             lst_px = [cl(x) for cl in self.classifiers()]
         self.switch.Supdate(lst_px, y)
-            
+
 
     def parameters_model(self):
         return self.model.parameters()
@@ -89,10 +98,10 @@ class BigModel(nn.Module):
     def classifiers(self):
         for i in range(self.nclassifiers):
             yield getattr(self, "classifier"+str(i))
-                  
-        
 
-    def classifiers_parameters_list(self):        
+
+
+    def classifiers_parameters_list(self):
         return [cl.parameters() for cl in self.classifiers()]
 
     def posterior(self):
@@ -105,7 +114,7 @@ class BigModel(nn.Module):
         lst_px = [cl(x) for cl in self.classifiers()]
         self.last_lst_px = lst_px
         return lst_px
-            
+
     def repr_posterior(self):
         post = self.switch.posterior
         bars = u' ▁▂▃▄▅▆▇█'
@@ -124,29 +133,29 @@ class StandardModel(nn.Module):
         out = self.classifier(x)
         return out.log()
 
-base_lr = .001
-minlr = 0.0001
-maxlr = 1.
+base_lr = args.lr
+minlr = args.minLR
+maxlr = args.maxLR
 
 def lr_sampler(tensor):
     """
-    Takes a torch tensor as input and sample a tensor with same size for 
+    Takes a torch tensor as input and sample a tensor with same size for
     learning rates
     """
-    
+
     lr = tensor.new(tensor.size()).uniform_()
     lr = (lr * (np.log(maxlr) - np.log(minlr)) + np.log(minlr)).exp()
     #lr.fill_(base_lr)
     return lr
 
 
-use_switch = True
+use_switch = args.use_switch
 if use_switch:
-    nclassifiers = 10
+    nclassifiers = args.nb_class
     net = BigModel(nclassifiers)
 else:
     net = StandardModel()
-    
+
 if use_cuda:
     net.cuda()
 
@@ -159,16 +168,16 @@ if use_switch:
     #classifiers_lr = [np.exp(np.log(minlr) + k * (np.log(maxlr) - np.log(minlr))/nclassifiers) \
     #                  for k in range(nclassifiers)]
     lr_model = generator_lr(net.model, lr_sampler)
-    
+
     optimizer = SGDSwitch(net.parameters_model(),
                           lr_model,
                           net.classifiers_parameters_list(),
                           classifiers_lr)
 else:
     optimizer = optim.Adam(net.parameters(), lr=base_lr)
-    
-    
-    
+
+
+
 # Training
 def train(epoch):
     net.train()
@@ -176,23 +185,23 @@ def train(epoch):
         optimizer.update_posterior(net.posterior())
     train_loss = 0
     correct = 0
-    total = 0    
+    total = 0
     pbar = tqdm(total=len(trainloader.dataset),bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} {postfix}')
     pbar.set_description("Epoch %d" % epoch)
     #with tqdm(total=100) as pbar:
-    
+
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         optimizer.zero_grad()
         inputs, targets = Variable(inputs), Variable(targets)
-        
-        
+
+
         outputs = net(inputs)
-        
+
         loss = criterion(outputs, targets)
         loss.backward()
-        
+
         if use_switch:
             newx = Variable(net.last_x.data.clone())
             for classifier in net.classifiers():
@@ -215,7 +224,7 @@ def train(epoch):
             net.update_switch(targets)
             optimizer.update_posterior(net.posterior())
     pbar.close()
-        
+
 def test(epoch):
     global best_acc
     net.eval()
@@ -237,11 +246,8 @@ def test(epoch):
     print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
     if use_switch:
         print(("Posterior : "+"{:.3f}, " * nclassifiers).format(*net.posterior()))
-    
 
-for epoch in range(10000):
+
+for epoch in range(args.epochs):
     train(epoch)
     test(epoch)
-
-
-

@@ -37,17 +37,17 @@ def parseArgs():
                         help = 'for seq jobs: number of the run')
     parser.add_argument('--data_augm', action = 'store_true', default = False, \
                         help = 'add data augmentation')
-    parser.add_argument('--mLR', action = 'store_true', default = False, \
+    parser.add_argument('--use_switch', action = 'store_true', default = False, \
                         help = 'multiple learning rates')
     parser.add_argument('--minLR', type = int, default = 0, \
                         help = 'log of the minimum LR')
     parser.add_argument('--maxLR', type = int, default = 0, \
                         help = 'log of the maximum LR')
-    parser.add_argument('--switch', type = int, default = 0, \
+    parser.add_argument('--nb_class', type = int, default = 0, \
                         help = 'number of layers before the switch')
     parser.add_argument('--stats', action = 'store_true', default = False, \
                         help = 'outputs PDF with stats over weights')
-    parser.add_argument('--nb_neur_mult', type = float, default = 1, \
+    parser.add_argument('--size_multiplier', type = float, default = 1, \
                         help = 'multiplier of the number of neurons per layer (default: 1)')
 
     # print options
