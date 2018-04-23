@@ -49,16 +49,16 @@ class VGGLayer(nn.Module):
     
 
 class VGGNet(nn.Module):
-    def __init__(self):
+    def __init__(self, K=1):
         super(VGGNet, self).__init__()
-        self.vgglayer1 = VGGLayer(2, 3, 64, 0.3)
-        self.vgglayer2 = VGGLayer(3, 64, 128, 0.4)
-        self.vgglayer3 = VGGLayer(3, 128, 256, 0.4)
-        self.vgglayer4 = VGGLayer(3, 256, 512, 0.4)
-        self.vgglayer5 = VGGLayer(3, 512, 512, 0.4)
+        self.vgglayer1 = VGGLayer(2, 3, K*64, 0.3)
+        self.vgglayer2 = VGGLayer(3, K*64, K*128, 0.4)
+        self.vgglayer3 = VGGLayer(3, K*128, K*256, 0.4)
+        self.vgglayer4 = VGGLayer(3, K*256, K*512, 0.4)
+        self.vgglayer5 = VGGLayer(3, K*512, K*512, 0.4)
 
-        self.fc1 = nn.Linear(512, 512)
-        self.bn = nn.BatchNorm1d(512)
+        self.fc1 = nn.Linear(K*512, K*512)
+        self.bn = nn.BatchNorm1d(K*512)
         #self.fc2 = nn.Linear(512,10)
 
     def forward(self, x):
@@ -83,7 +83,8 @@ class LinearClassifier(nn.Module):
 
     def forward(self, x):
         x = self.fc(x)
-        x = F.softmax(x)
+        #x = F.log_softmax(x, dim=1)
+        x = F.softmax(x, dim=1)
         return x
 
 # Residual Block

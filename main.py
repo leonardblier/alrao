@@ -1,5 +1,6 @@
 '''Train CIFAR10 with PyTorch.'''
 from __future__ import print_function
+from collections import OrderedDict
 
 import torch
 import torch.nn as nn
@@ -13,19 +14,21 @@ import torchvision.transforms as transforms
 
 import os
 import argparse
-
-
+from tqdm import tqdm
+import numpy as np
 
 from models import VGGNet, LinearClassifier
 from switch import Switch
-from optim_spec import SGDSwitch
+from optim_spec import SGDSwitch, SGDSpec, generator_lr
 
 import pdb
 
+torch.manual_seed(123)
+
 use_cuda = torch.cuda.is_available()
 best_acc = 0  # best test accuracy
-start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
+batch_size = 64
 # TODO : Verifier aue le switch et ses updates se passent bien avec les mini-batchs
 
 # Data
@@ -43,10 +46,10 @@ transform_test = transforms.Compose([
 ])
 
 trainset = torchvision.datasets.CIFAR10(root='/data/titanic_1/datasets', train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
 
 testset = torchvision.datasets.CIFAR10(root='/data/titanic_1/datasets', train=False, download=True, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
+testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
@@ -54,31 +57,39 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 class BigModel(nn.Module):
     def __init__(self, nclassifiers):
         super(BigModel, self).__init__()
-        self.model = VGGNet()
-        self.switch = Switch(nclassifiers)
+        K = 6
+        self.model = VGGNet(K)
+        self.switch = Switch(nclassifiers)        
         self.nclassifiers = nclassifiers
         
         for i in range(nclassifiers):
-            classifier = LinearClassifier(512, 10)
+            classifier = LinearClassifier(K*512, 10)
             setattr(self, "classifier"+str(i), classifier)
             
-    def forward(self, x, y=None):
+    def forward(self, x):#, y=None):
         x = self.model(x)
-        lst_x = []
-        for i in range(self.nclassifiers):
-            classifier = getattr(self, "classifier"+str(i))
-            lst_x.append(classifier(x))
-
+        lst_px = [getattr(self, "classifier"+str(i))(x) \
+                  for i in range(self.nclassifiers)]
         ## WARNING : IS THIS REALLY WHAT WE WANT TO DO ?????
-        if y is not None:
-            self.switch.Supdate(lst_x, y)
-            
-        output = self.switch.forward(lst_x)
-
+        #if y is not None:
+        #    self.switch.Supdate(lst_px, y)
+        self.last_lst_px = lst_px
+        output = self.switch.forward(lst_px)
+        output = output.log()
         return output
 
-    def named_parameters_model(self):
-        return self.model.named_parameters()
+    def update_switch(self, y, x=None):
+        if x is None:
+            lst_px = self.last_lst_px
+        else:
+            lst_px = [getattr(self, "classifier"+str(i))(x) \
+                  for i in range(self.nclassifiers)]
+        self.switch.Supdate(lst_px, y)
+            
+
+    def parameters_model(self):
+        return self.model.parameters()
+        
 
     def classifiers_parameters_list(self):
         clparamlist = []
@@ -89,6 +100,13 @@ class BigModel(nn.Module):
 
     def posterior(self):
         return self.switch.posterior
+
+    def repr_posterior(self):
+        post = self.switch.posterior
+        bars = u' ▁▂▃▄▅▆▇█'
+        res = "|"+"".join(bars[int(px)] for px in post/post.max() * 8) + "|"
+        assert len(res) == self.nclassifiers + 2
+        return res
 
 
 class StandardModel(nn.Module):
@@ -102,22 +120,25 @@ class StandardModel(nn.Module):
         out = self.classifier(x)
         return out
 
+base_lr = .01
+minlr = 0.0001
+maxlr = .1
+
+def lr_sampler(tensor):
+    """
+    Takes a torch tensor as input and sample a tensor with same size for 
+    learning rates
+    """
     
-def gen_lr(p):
-    if use_cuda:
-        lr = torch.cuda.FloatTensor(p.data)
-    else:
-        lr = torch.Tensor(p.data)
-    #lr.uniform_()
-    #lr = lr * 20. - 15.
-    #lr = torch.pow(2., lr)
-    lr.fill_(.1)
+    lr = tensor.new(tensor.size()).uniform_()
+    lr = (lr * (np.log(maxlr) - np.log(minlr)) + np.log(minlr)).exp()
+    #lr.fill_(base_lr)
     return lr
 
 
-use_switch = False
+use_switch = True
 if use_switch:
-    nclassifiers = 1
+    nclassifiers = 10
     net = BigModel(nclassifiers)
 else:
     net = StandardModel()
@@ -127,49 +148,64 @@ if use_cuda:
 
 
 
-criterion = nn.CrossEntropyLoss()
+criterion = nn.NLLLoss()
 
 if use_switch:
-    #classifiers_lr = [2. ** (5 - k) for k in range(nclassifiers)]
-    classifiers_lr = [0.1 for k in range(nclassifiers)]
-    optimizer = SGDSwitch(net.named_parameters_model(),
+    #classifiers_lr = [base_lr for k in range(nclassifiers)]
+    classifiers_lr = [np.exp(np.log(minlr) + k * (np.log(maxlr) - np.log(minlr))/nclassifiers) \
+                      for k in range(nclassifiers)]
+    lr_model = generator_lr(net.model, lr_sampler)
+    
+    optimizer = SGDSwitch(net.parameters_model(),
+                          lr_model,
                           net.classifiers_parameters_list(),
-                          classifiers_lr,
-                          gen_lr)
+                          classifiers_lr)
 else:
-    optimizer = SGD(net.parameters(), lr=.1)
+    optimizer = optim.SGD(net.parameters(), lr=base_lr)
+    
     
     
 # Training
 def train(epoch):
-    print('\nEpoch: %d' % epoch)
     net.train()
+    optimizer.update_posterior(net.posterior())
     train_loss = 0
     correct = 0
-    total = 0
+    total = 0    
+    pbar = tqdm(total=len(trainloader.dataset),bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} {postfix}')
+    pbar.set_description("Epoch %d" % epoch)
+    #with tqdm(total=100) as pbar:
+    
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         optimizer.zero_grad()
         inputs, targets = Variable(inputs), Variable(targets)
         
-        if use_switch:
-            outputs = net(inputs, y=targets)
-            optimizer.update_posterior(net.posterior())
-        else:
-            outputs = net(inputs)
+        
+        outputs = net(inputs)
             
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
+        
+        
 
         train_loss += loss.data[0]
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
 
-        print('Loss: %.3f | Acc: %.3f%% (%d/%d)' % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
-
+        pbar.update(batch_size)
+        postfix = OrderedDict([("LossTrain","{:.4f}".format(train_loss/(batch_idx+1))),
+                               ("AccTrain", "{:.3f}".format(100.*correct/total)),
+                               ("PostSw",net.repr_posterior())])
+        pbar.set_postfix(postfix)
+        if use_switch:
+            net.update_switch(targets)
+            optimizer.update_posterior(net.posterior())
+    pbar.close()
+        
 def test(epoch):
     global best_acc
     net.eval()
@@ -188,10 +224,9 @@ def test(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
 
-        print("Test")
-        print('Loss: %.3f | Acc: %.3f%% (%d/%d)'
-            % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
-
+    print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
+    if use_switch:
+        print(("Posterior : "+"{:.3f}, " * nclassifiers).format(*net.posterior()))
     
 
 for epoch in range(10000):
