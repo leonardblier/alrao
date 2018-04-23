@@ -169,19 +169,19 @@ class SGDSwitch:
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
                  classifiers_lr):
         #super(SGDSwitch, self).__init__()
-        self.sgdmodel = AdamSpec(parameters_model, lr_model)
+        self.sgdmodel = SGDSpec(parameters_model, lr_model)
         self.classifiers_lr = classifiers_lr
-        #self.sgdclassifiers = [optim.SGD(parameters, lr) for parameters, lr in \
-        #                       zip(classifiers_parameters_list, classifiers_lr)]
-        self.sgdclassifiers = [optim.Adam(parameters, lr) for parameters, lr in \
+        self.sgdclassifiers = [optim.SGD(parameters, lr) for parameters, lr in \
                                zip(classifiers_parameters_list, classifiers_lr)]
+        # self.sgdclassifiers = [optim.Adam(parameters, lr) for parameters, lr in \
+        #                        zip(classifiers_parameters_list, classifiers_lr)]
 
     def update_posterior(self, posterior):
         self.posterior = posterior
 
 
     def step(self):
-        self.sgdmodel.step()        
+        self.sgdmodel.step()    
         for sgdclassifier, posterior, lr in zip(self.sgdclassifiers,
                                                 self.posterior,
                                                 self.classifiers_lr):
@@ -189,8 +189,6 @@ class SGDSwitch:
                 #param_group['lr'] = lr / posterior
                 sgdclassifier.step()
 
-            
-        
     def zero_grad(self):
         self.sgdmodel.zero_grad()
         for opt in self.sgdclassifiers:

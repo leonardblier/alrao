@@ -8,7 +8,7 @@ class ConvBnReluLayer(nn.Module):
         super(ConvBnReluLayer, self).__init__()
         
         self.conv = nn.Conv2d(nfilter_in, nfilter_out, 3, padding = 1)
-        self.bn2d = nn.BatchNorm2d(nfilter_out)
+        self.bn2d = nn.BatchNorm2d(nfilter_out, affine=False)
         
     def forward(self, x):
         x = self.conv(x)
@@ -58,7 +58,7 @@ class VGGNet(nn.Module):
         self.vgglayer5 = VGGLayer(3, K*512, K*512, 0.4)
 
         self.fc1 = nn.Linear(K*512, K*512)
-        self.bn = nn.BatchNorm1d(K*512)
+        self.bn = nn.BatchNorm1d(K*512, affine=False)
         #self.fc2 = nn.Linear(512,10)
 
     def forward(self, x):

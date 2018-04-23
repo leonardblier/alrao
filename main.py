@@ -57,7 +57,7 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 class BigModel(nn.Module):
     def __init__(self, nclassifiers):
         super(BigModel, self).__init__()
-        K = 6
+        K = 4
         self.model = VGGNet(K)
         self.switch = Switch(nclassifiers)        
         self.nclassifiers = nclassifiers
@@ -66,13 +66,10 @@ class BigModel(nn.Module):
             classifier = LinearClassifier(K*512, 10)
             setattr(self, "classifier"+str(i), classifier)
             
-    def forward(self, x):#, y=None):
+    def forward(self, x):
         x = self.model(x)
-        lst_px = [getattr(self, "classifier"+str(i))(x) \
-                  for i in range(self.nclassifiers)]
-        ## WARNING : IS THIS REALLY WHAT WE WANT TO DO ?????
-        #if y is not None:
-        #    self.switch.Supdate(lst_px, y)
+        self.last_x = x
+        lst_px = [cl(x) for cl in self.classifiers()]
         self.last_lst_px = lst_px
         output = self.switch.forward(lst_px)
         output = output.log()
@@ -82,47 +79,54 @@ class BigModel(nn.Module):
         if x is None:
             lst_px = self.last_lst_px
         else:
-            lst_px = [getattr(self, "classifier"+str(i))(x) \
-                  for i in range(self.nclassifiers)]
+            lst_px = [cl(x) for cl in self.classifiers()]
         self.switch.Supdate(lst_px, y)
             
 
     def parameters_model(self):
         return self.model.parameters()
+
+    def classifiers(self):
+        for i in range(self.nclassifiers):
+            yield getattr(self, "classifier"+str(i))
+                  
         
 
-    def classifiers_parameters_list(self):
-        clparamlist = []
-        for i in range(self.nclassifiers):
-            classifier = getattr(self, "classifier"+str(i))
-            clparamlist.append(classifier.parameters())
-        return clparamlist
+    def classifiers_parameters_list(self):        
+        return [cl.parameters() for cl in self.classifiers()]
 
     def posterior(self):
         return self.switch.posterior
 
+    def classifiers_predictions(self, x=None):
+        if x is None:
+            return self.last_lst_px
+        x = self.model(x)
+        lst_px = [cl(x) for cl in self.classifiers()]
+        self.last_lst_px = lst_px
+        return lst_px
+            
     def repr_posterior(self):
         post = self.switch.posterior
         bars = u' ▁▂▃▄▅▆▇█'
         res = "|"+"".join(bars[int(px)] for px in post/post.max() * 8) + "|"
-        assert len(res) == self.nclassifiers + 2
         return res
 
 
 class StandardModel(nn.Module):
-    def __init__(self):
+    def __init__(self, K=1):
         super(StandardModel, self).__init__()
-        self.model = VGGNet()
-        self.classifier = LinearClassifier(512, 10)
+        self.model = VGGNet(K)
+        self.classifier = LinearClassifier(K*512, 10)
 
     def forward(self, x):
         x = self.model(x)
         out = self.classifier(x)
-        return out
+        return out.log()
 
-base_lr = .01
+base_lr = .001
 minlr = 0.0001
-maxlr = .1
+maxlr = 1.
 
 def lr_sampler(tensor):
     """
@@ -151,9 +155,9 @@ if use_cuda:
 criterion = nn.NLLLoss()
 
 if use_switch:
-    #classifiers_lr = [base_lr for k in range(nclassifiers)]
-    classifiers_lr = [np.exp(np.log(minlr) + k * (np.log(maxlr) - np.log(minlr))/nclassifiers) \
-                      for k in range(nclassifiers)]
+    classifiers_lr = [base_lr for k in range(nclassifiers)]
+    #classifiers_lr = [np.exp(np.log(minlr) + k * (np.log(maxlr) - np.log(minlr))/nclassifiers) \
+    #                  for k in range(nclassifiers)]
     lr_model = generator_lr(net.model, lr_sampler)
     
     optimizer = SGDSwitch(net.parameters_model(),
@@ -161,14 +165,15 @@ if use_switch:
                           net.classifiers_parameters_list(),
                           classifiers_lr)
 else:
-    optimizer = optim.SGD(net.parameters(), lr=base_lr)
+    optimizer = optim.Adam(net.parameters(), lr=base_lr)
     
     
     
 # Training
 def train(epoch):
     net.train()
-    optimizer.update_posterior(net.posterior())
+    if use_switch:
+        optimizer.update_posterior(net.posterior())
     train_loss = 0
     correct = 0
     total = 0    
@@ -184,12 +189,16 @@ def train(epoch):
         
         
         outputs = net(inputs)
-            
+        
         loss = criterion(outputs, targets)
         loss.backward()
+        
+        if use_switch:
+            newx = Variable(net.last_x.data.clone())
+            for classifier in net.classifiers():
+                loss_classifier = criterion(classifier(newx).log(), targets)
+                loss_classifier.backward()
         optimizer.step()
-        
-        
 
         train_loss += loss.data[0]
         _, predicted = torch.max(outputs.data, 1)
@@ -198,8 +207,9 @@ def train(epoch):
 
         pbar.update(batch_size)
         postfix = OrderedDict([("LossTrain","{:.4f}".format(train_loss/(batch_idx+1))),
-                               ("AccTrain", "{:.3f}".format(100.*correct/total)),
-                               ("PostSw",net.repr_posterior())])
+                               ("AccTrain", "{:.3f}".format(100.*correct/total))])
+        if use_switch:
+            postfix["PostSw"] = net.repr_posterior()
         pbar.set_postfix(postfix)
         if use_switch:
             net.update_switch(targets)
