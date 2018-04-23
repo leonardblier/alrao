@@ -5,7 +5,7 @@ from sbatch import launch_exp
 # Options
 py_file_name = 'main.py'
 nb_expes = 1
-argsDict = {'epochs': 240,
+argsDict = {'epochs': 1,
             'size_multiplier': 1,
 
 #            'optimizer': 'Adam',
@@ -23,7 +23,7 @@ argsDict = {'epochs': 240,
             'exp_number': -1, # def: -1
             'stats': False}
 
-sbatchOpt = ['--job-name=weight-decay',
+sbatchOpt = ['--job-name=mixed_lr',
              '--gres=gpu:1',
              '--time=2-00:00:00',
              '-n1',
@@ -35,16 +35,12 @@ sbatchOpt = ['--job-name=weight-decay',
 
 temp_file_name = 'temp_run.sh'
 
-gridDict = {'size_multiplier': [1, 2, 3],
-            'nb_class': [1, 5, 10]}
-for argsDict['size_multiplier'] in gridDict['size_multiplier']:
-    for argsDict['nb_class'] in gridDict['nb_class']:
-        if nb_expes > 1:
-            for i in range(nb_expes):
-                argsDict['exp_number'] = i
-                launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
-        else:
-            launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
+if nb_expes > 1:
+    for i in range(nb_expes):
+        argsDict['exp_number'] = i
+        launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
+else:
+    launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
 
 
 """

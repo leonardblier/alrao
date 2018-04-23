@@ -23,7 +23,10 @@ def build_sbatch(py_file_name, temp_file_name, sbatchOpt, argsDict):
         f_sbatch.write('#SBATCH ' + opt + '\n')
     f_sbatch.write('\n')
 
+    f_sbatch.write('source activate pytorch\n')
     f_sbatch.write('python ' + py_file_name + build_args(argsDict) + '\n')
+    f_sbatch.write('source deactivate pytorch\n')
+
     f_sbatch.close()
 
 def launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict):
