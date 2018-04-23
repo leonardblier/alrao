@@ -2,14 +2,16 @@ import sys
 import subprocess
 from sbatch import launch_exp
 
-# Options
 py_file_name = 'main.py'
-nb_expes = 1
-argsDict = {'epochs': 1,
+nb_expes = 1 # number of experiment per set of parameters
+
+# List of options added when launching 'py_file_name'
+argsDict = {'epochs': 400,
             'size_multiplier': 1,
 
 #            'optimizer': 'Adam',
             'lr': .005, # def: .01
+            'use_switch': False,
             'minLR': -5,
             'maxLR': 0,
             'nb_class': 11,
@@ -23,6 +25,7 @@ argsDict = {'epochs': 1,
             'exp_number': -1, # def: -1
             'stats': False}
 
+# List of slurm options
 sbatchOpt = ['--job-name=mixed_lr',
              '--gres=gpu:1',
              '--time=2-00:00:00',
@@ -33,8 +36,10 @@ sbatchOpt = ['--job-name=mixed_lr',
              '-C pascal'] #,
 #             '--exclude=titanic-2']
 
+# Name of the temporary file to be launched with slurm (sbatch)
 temp_file_name = 'temp_run.sh'
 
+# Send the tasks
 if nb_expes > 1:
     for i in range(nb_expes):
         argsDict['exp_number'] = i
