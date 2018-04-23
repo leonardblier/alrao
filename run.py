@@ -6,15 +6,15 @@ py_file_name = 'main.py'
 nb_expes = 1 # number of experiment per set of parameters
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 400,
+argsDict = {'epochs': 1,
             'size_multiplier': 1,
 
 #            'optimizer': 'Adam',
-            'lr': .005, # def: .01
+            'lr': .001, # def: .01
             'use_switch': False,
             'minLR': -5,
             'maxLR': 0,
-            'nb_class': 11,
+            'nb_class': 1,
             'data_augm': True,
 #            'batchnorm': 'BN',
 
