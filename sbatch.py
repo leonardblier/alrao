@@ -24,6 +24,7 @@ def build_args(argsDict):
     return lstArgs
 
 def build_sbatch(runOpt, sbatchOpt, argsDict):
+    # Build unique temp_file name
     i_dot = getLastDot(runOpt['temp_file'])
     if i_dot == -1:
         temp_type = ''
@@ -39,15 +40,21 @@ def build_sbatch(runOpt, sbatchOpt, argsDict):
     runOpt['temp_file'] = runOpt['temp_file'] + temp_suffix + temp_type
 
     f_sbatch = open(runOpt['temp_file'], 'w')
-    f_sbatch.write('#!/bin/bash\n\n')
 
+    # Slurm options
+    f_sbatch.write('#!/bin/bash\n\n')
     for opt in sbatchOpt:
         f_sbatch.write('#SBATCH ' + opt + '\n')
     f_sbatch.write('\n')
 
+    # Bash part
     f_sbatch.write('source activate ' + runOpt['env_name'] + '\n')
-    if runOpt['interactive']: f_sbatch.write('srun ')
-    f_sbatch.write(runOpt['command'] + ' ' + runOpt['script'] + build_args(argsDict) + '\n')
+
+    str_args = build_args(argsDict)
+    if 'ipython' in runOpt['command']:
+        str_args = ' --' + str_args
+    f_sbatch.write(runOpt['command'] + ' ' + runOpt['script'] + str_args + '\n')
+
     f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
 
     f_sbatch.close()
