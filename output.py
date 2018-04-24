@@ -55,6 +55,7 @@ def genNameBase(args):
         nameBase += repr(args.nb_class)
 
     nameBase += '_' + args.optimizer
+    nameBase += '_K' + args.size_multiplier
     nameBase += '_e' + repr(args.epochs)
 
     if args.exp_number != -1:

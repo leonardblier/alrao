@@ -2,14 +2,16 @@ import sys
 import subprocess
 from sbatch import launch_exp
 
+env_name = 'pytorch' # name of the environment to be activated
+
 py_file_name = 'main.py'
-nb_expes = 1 # number of experiment per set of parameters
+nb_expes = 1 # number of experiments per set of parameters
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 5,
+argsDict = {'epochs': 500,
             'size_multiplier': 1,
 
-            'optimizer': 'Adam',
+            'optimizer': 'SGD',
             'lr': .001,
             'use_switch': False,
             'minLR': -5,
@@ -21,7 +23,7 @@ argsDict = {'epochs': 5,
 #            'penalty': True,
 #            'dropOut': 0, # def: 0
 
-            'suffix': '', # def: ''
+            'suffix': 'test_lr', # def: ''
             'exp_number': -1, # def: -1
             'stats': False}
 
@@ -40,12 +42,14 @@ sbatchOpt = ['--job-name=mixed_lr',
 temp_file_name = 'temp_run.sh'
 
 # Send the tasks
-if nb_expes > 1:
-    for i in range(nb_expes):
-        argsDict['exp_number'] = i
-        launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
-else:
-    launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
+gridDict = {'lr': [.0001, .001, .01, .1]}
+for argsDict['lr'] in gridDict['lr']:
+    if nb_expes > 1:
+        for i in range(nb_expes):
+            argsDict['exp_number'] = i
+            launch_exp(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict)
+    else:
+        launch_exp(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict)
 
 
 """
@@ -56,7 +60,7 @@ for argsDict['size_multiplier'] in gridDict['size_multiplier']:
         if nb_expes > 1:
             for i in range(nb_expes):
                 argsDict['exp_number'] = i
-                launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
+                launch_exp(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict)
         else:
-            launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
+            launch_exp(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict)
 """

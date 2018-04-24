@@ -15,7 +15,7 @@ def build_args(argsDict):
             lstArgs += ' --' + name + '=' + repr(key)
     return lstArgs
 
-def build_sbatch(py_file_name, temp_file_name, sbatchOpt, argsDict):
+def build_sbatch(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict):
     f_sbatch = open(temp_file_name, 'w')
     f_sbatch.write('#!/bin/bash\n\n')
 
@@ -23,14 +23,14 @@ def build_sbatch(py_file_name, temp_file_name, sbatchOpt, argsDict):
         f_sbatch.write('#SBATCH ' + opt + '\n')
     f_sbatch.write('\n')
 
-    f_sbatch.write('source activate pytorch\n')
+    f_sbatch.write('source activate ' + env_name + '\n')
     f_sbatch.write('python ' + py_file_name + build_args(argsDict) + '\n')
-    f_sbatch.write('source deactivate pytorch\n')
+    f_sbatch.write('source deactivate ' + env_name + '\n')
 
     f_sbatch.close()
 
-def launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict):
-    build_sbatch(py_file_name, temp_file_name, sbatchOpt, argsDict)
+def launch_exp(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict):
+    build_sbatch(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict)
     bashCMD = 'sbatch ' + temp_file_name
     proc = subprocess.Popen(bashCMD.split(), stdout = subprocess.PIPE)
     output, error = proc.communicate()
