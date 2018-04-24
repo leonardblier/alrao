@@ -23,6 +23,8 @@ from optim_spec import SGDSwitch, SGDSpec, generator_lr
 
 import pdb
 
+from utils import *
+
 torch.manual_seed(123)
 
 use_cuda = torch.cuda.is_available()
@@ -57,7 +59,7 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 class BigModel(nn.Module):
     def __init__(self, nclassifiers):
         super(BigModel, self).__init__()
-        K = 4
+        K = 1
         self.model = VGGNet(K)
         self.switch = Switch(nclassifiers)        
         self.nclassifiers = nclassifiers
@@ -90,8 +92,6 @@ class BigModel(nn.Module):
         for i in range(self.nclassifiers):
             yield getattr(self, "classifier"+str(i))
                   
-        
-
     def classifiers_parameters_list(self):        
         return [cl.parameters() for cl in self.classifiers()]
 
@@ -113,6 +113,9 @@ class BigModel(nn.Module):
         return res
 
 
+
+
+
 class StandardModel(nn.Module):
     def __init__(self, K=1):
         super(StandardModel, self).__init__()
@@ -126,7 +129,7 @@ class StandardModel(nn.Module):
 
 base_lr = .001
 minlr = 0.0001
-maxlr = 1.
+maxlr = 10.
 
 def lr_sampler(tensor):
     """
@@ -155,9 +158,9 @@ if use_cuda:
 criterion = nn.NLLLoss()
 
 if use_switch:
-    classifiers_lr = [base_lr for k in range(nclassifiers)]
-    #classifiers_lr = [np.exp(np.log(minlr) + k * (np.log(maxlr) - np.log(minlr))/nclassifiers) \
-    #                  for k in range(nclassifiers)]
+    #classifiers_lr = [base_lr for k in range(nclassifiers)]
+    classifiers_lr = [np.exp(np.log(minlr) + k * (np.log(maxlr) - np.log(minlr))/nclassifiers) \
+                      for k in range(nclassifiers)]
     lr_model = generator_lr(net.model, lr_sampler)
     
     optimizer = SGDSwitch(net.parameters_model(),
@@ -192,14 +195,26 @@ def train(epoch):
         
         loss = criterion(outputs, targets)
         loss.backward()
-        
-        if use_switch:
-            newx = Variable(net.last_x.data.clone())
-            for classifier in net.classifiers():
-                loss_classifier = criterion(classifier(newx).log(), targets)
-                loss_classifier.backward()
-        optimizer.step()
 
+        print("Before Aux Gradient:")
+        l2params(net)
+        print(net.posterior())
+        if use_switch:
+           newx = Variable(net.last_x.data.clone())
+           for classifier in net.classifiers():
+               loss_classifier = criterion(classifier(newx).log(), targets)
+               loss_classifier.backward()
+               from math import isnan
+               if any(np.any(np.isnan(p.grad.data)) for p in classifier.parameters()):
+                   print("loss classifier:{:.5f}".format(loss_classifier.data[0]))
+                   split_loss = nn.NLLLoss(reduce=False)(classifier(newx).log(), targets)
+                   maxloss = split_loss.max()
+                   maxloss.backward()
+                   stop
+        print("After Aux Gradient:")
+        l2params(net)
+        optimizer.step()
+        
         train_loss += loss.data[0]
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
