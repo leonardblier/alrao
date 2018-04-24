@@ -24,7 +24,7 @@ from optim_spec import SGDSwitch, SGDSpec, generator_lr
 from input import parseArgs
 from output import OutputManager
 
-import pdb
+import pdb; pdb.set_trace()
 
 torch.manual_seed(123)
 
