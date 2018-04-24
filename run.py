@@ -6,11 +6,11 @@ py_file_name = 'main.py'
 nb_expes = 1 # number of experiment per set of parameters
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 1,
+argsDict = {'epochs': 5,
             'size_multiplier': 1,
 
-#            'optimizer': 'Adam',
-            'lr': .001, # def: .01
+            'optimizer': 'Adam',
+            'lr': .001,
             'use_switch': False,
             'minLR': -5,
             'maxLR': 0,

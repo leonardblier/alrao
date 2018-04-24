@@ -50,7 +50,7 @@ def genNameBase(args):
         nameBase += 'p' if args.maxLR >= 0 else 'm'
         nameBase += repr(abs(args.maxLR))
 
-    if args.nb_class != 0:
+    if args.use_switch and args.nb_class != 0:
         nameBase += '_sw-'
         nameBase += repr(args.nb_class)
 
@@ -97,11 +97,11 @@ class OutputManager:
         fileData = open(self.nameFileData, 'a')
         U_str = repr(epoch)
         U_str += '\t' + repr(t)
-        U_str += '\t' + repr(train_nll)
-        U_str += '\t' + repr(train_acc)
-        U_str += '\t' + repr(valid_nll)
-        U_str += '\t' + repr(valid_acc)
-        U_str += '\t' + repr(test_nll)
-        U_str += '\t' + repr(test_acc)
+        U_str += '\t' + "{:.4f}".format(train_nll)
+        U_str += '\t' + "{:.5f}".format(train_acc)
+        U_str += '\t' + "{:.4f}".format(valid_nll)
+        U_str += '\t' + "{:.5f}".format(valid_acc)
+        U_str += '\t' + "{:.4f}".format(test_nll)
+        U_str += '\t' + "{:.5f}".format(test_acc)
         fileData.write(U_str + '\n')
         fileData.close()
