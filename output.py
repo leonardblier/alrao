@@ -66,89 +66,42 @@ def genNameBase(args):
 
     return nameBase
 
-# Journal of experiments
-def InitJournal(nameBase):
-    includes.outputGlobal('------------' + str(datetime.datetime.now()) + '------------')
-    includes.outputGlobal(nameBase)
-    includes.outputGlobal('Loss_' + nameBase + '.txt')
+class OutputManager:
+    def __init__(self, args):
+        self.nameBase = genNameBase(args)
 
-    includes.outputGlobal('============ run.sh ============')
-    with open("run.py") as f:
-        lines = f.readlines()
-        for l in lines:
-            includes.outputGlobal(l.rstrip())
-    includes.outputGlobal('================================')
+        fileLstNames = open('FileNamesList.txt', 'a')
+        fileLstNames.write(self.nameBase + '\n')
+        fileLstNames.close()
 
-    includes.outputGlobal('\n')
+        self.nameFileData = 'Data_' + self.nameBase + '.txt'
+        self.initData()
 
-# Journal of experiments
-def InitList(nameBase):
-    includes.outputList(nameBase)
+    def initData(self):
+        fileData = open(self.nameFileData, 'w')
+        U_str = 'epoch'
+        U_str += '\t' + 'time'
+        U_str += '\t' + 'train_nll'
+        U_str += '\t' + 'train_acc'
+        U_str += '\t' + 'valid_nll'
+        U_str += '\t' + 'valid_acc'
+        U_str += '\t' + 'test_nll'
+        U_str += '\t' + 'test_acc'
+        fileData.write(U_str + '\n')
+        fileData.close()
 
-# Output loss
-def InitLossFile():
-    includes.outputLoss('train_pen  ' + \
-                        '\t' + 'train_nll' + \
-                        '\t' + 'train_loss' + \
-                        '\t' + 'valid_pen' + \
-                        '\t' + 'valid_nll' + \
-                        '\t' + 'valid_eff' + \
-                        '\t' + 'test_pen' + \
-                        '\t' + 'test_nll' + \
-                        '\t' + 'test_eff')
-
-def WriteLoss(train_pen, train_nll, train_loss, \
-              valid_pen, valid_nll, valid_eff, \
-              test_pen, test_nll, test_eff):
-    includes.outputLoss('%.4f   \t%.4f   \t%.4f   \t%.4f   \t%.4f   \t%.4f   \t%.4f   \t%.4f   \t%.4f' \
-                        %(train_pen, train_nll, train_loss, \
-                          valid_pen, valid_nll, valid_eff, \
-                          test_pen, test_nll, test_eff))
-
-# Output grosPatapouf
-def InitPata(net):
-    U_str = 'epoch'
-    U_str += '\t' + 'time'
-
-    U_str += '\t' + 'tot_neur'
-    if hasattr(net, 'listLayers'):
-        for layer in net.listLayers:
-            U_str += '\t' + layer.name2
-
-    U_str += '\t' + 'train_pen'
-    U_str += '\t' + 'train_nll'
-    U_str += '\t' + 'train_loss'
-    U_str += '\t' + 'valid_pen'
-    U_str += '\t' + 'valid_nll'
-    U_str += '\t' + 'valid_eff'
-    U_str += '\t' + 'test_pen'
-    U_str += '\t' + 'test_nll'
-    U_str += '\t' + 'test_eff'
-
-    includes.grosPatapouf(U_str)
-
-def WritePata(epoch, t, net, \
-              train_pen, train_nll, train_loss, \
-              valid_pen, valid_nll, valid_eff, \
-              test_pen, test_nll, test_eff):
-    U_str = ''
-    total = 0
-    if hasattr(net, 'listLayers'):
-        for layer in net.listLayers:
-            total += layer.weight.data.size()[0]
-            U_str += '\t' + repr(layer.weight.data.size()[0])
-    U_str = repr(total) + U_str
-
-    U_str = repr(epoch) + '\t' + repr(t) + '\t' + U_str
-
-    U_str += '\t' + repr(train_pen)
-    U_str += '\t' + repr(train_nll)
-    U_str += '\t' + repr(train_loss)
-    U_str += '\t' + repr(valid_pen)
-    U_str += '\t' + repr(valid_nll)
-    U_str += '\t' + repr(valid_eff)
-    U_str += '\t' + repr(test_pen)
-    U_str += '\t' + repr(test_nll)
-    U_str += '\t' + repr(test_eff)
-
-    includes.grosPatapouf(U_str)
+    def updateData(self, epoch, t, \
+                   train_nll, train_acc, \
+                   valid_nll, valid_acc, \
+                   test_nll, test_acc):
+        fileData = open(self.nameFileData, 'a')
+        U_str = repr(epoch)
+        U_str += '\t' + repr(t)
+        U_str += '\t' + repr(train_nll)
+        U_str += '\t' + repr(train_acc)
+        U_str += '\t' + repr(valid_nll)
+        U_str += '\t' + repr(valid_acc)
+        U_str += '\t' + repr(test_nll)
+        U_str += '\t' + repr(test_acc)
+        fileData.write(U_str + '\n')
+        fileData.close()

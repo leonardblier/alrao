@@ -13,22 +13,18 @@ def parseArgs():
     # epochs
     parser.add_argument('--epochs', type = int, default = 1, \
                         help = 'number of epochs for phase 1 (default: 1)')
-    parser.add_argument('--epochs2', type = int, default = 0, \
-                        help = 'number of epochs for phase 2 (default: 0)')
 
     # Drop out
     parser.add_argument('--dropOut', type = float, default = 0, \
                         help = 'drop-out rate in the first phase (default: 0)')
-    parser.add_argument('--dropOut2', type = float, default = 0, \
-                        help = 'drop-out rate in the second phase (default: 0)')
 
     # prior
     parser.add_argument('--penalty', action = 'store_true', default = False, \
                         help = 'add penalty to loss')
 
     # options
-    parser.add_argument('--optimizer', default = 'Adam', \
-                        help = 'optimizer (default: Adam) {Adam, SGD, RMSprop}')
+    parser.add_argument('--optimizer', default = 'SGD', \
+                        help = 'optimizer (default: SGD) {Adam, SGD, RMSprop}')
     parser.add_argument('--lr', type = float, default = .01, \
                         help = 'learning rate (default: .01)')
     parser.add_argument('--suffix', default = '', \
@@ -44,7 +40,7 @@ def parseArgs():
     parser.add_argument('--maxLR', type = int, default = 0, \
                         help = 'log of the maximum LR')
     parser.add_argument('--nb_class', type = int, default = 0, \
-                        help = 'number of layers before the switch')
+                        help = 'number of classifiers before the switch')
     parser.add_argument('--stats', action = 'store_true', default = False, \
                         help = 'outputs PDF with stats over weights')
     parser.add_argument('--size_multiplier', type = float, default = 1, \

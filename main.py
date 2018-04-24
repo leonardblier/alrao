@@ -14,6 +14,7 @@ import torchvision.transforms as transforms
 
 import os
 import argparse
+import time
 from tqdm import tqdm
 import numpy as np
 
@@ -21,12 +22,14 @@ from models import VGGNet, LinearClassifier
 from switch import Switch
 from optim_spec import SGDSwitch, SGDSpec, generator_lr
 from input import parseArgs
+from output import OutputManager
 
 import pdb
 
 torch.manual_seed(123)
 
 args = parseArgs()
+outputManager = OutputManager(args)
 
 use_cuda = torch.cuda.is_available()
 best_acc = 0  # best test accuracy
@@ -66,13 +69,12 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 class BigModel(nn.Module):
     def __init__(self, nclassifiers):
         super(BigModel, self).__init__()
-        K = args.size_multiplier
-        self.model = VGGNet(K)
+        self.model = VGGNet(args.size_multiplier)
         self.switch = Switch(nclassifiers)
         self.nclassifiers = nclassifiers
 
         for i in range(nclassifiers):
-            classifier = LinearClassifier(K*512, 10)
+            classifier = LinearClassifier(args.size_multiplier * 512, 10)
             setattr(self, "classifier"+str(i), classifier)
 
     def forward(self, x):
@@ -149,10 +151,8 @@ def lr_sampler(tensor):
     return lr
 
 
-use_switch = args.use_switch
-if use_switch:
-    nclassifiers = args.nb_class
-    net = BigModel(nclassifiers)
+if args.use_switch:
+    net = BigModel(args.nb_class)
 else:
     net = StandardModel()
 
@@ -160,13 +160,12 @@ if use_cuda:
     net.cuda()
 
 
-
 criterion = nn.NLLLoss()
 
-if use_switch:
-    classifiers_lr = [base_lr for k in range(nclassifiers)]
-    #classifiers_lr = [np.exp(np.log(minlr) + k * (np.log(maxlr) - np.log(minlr))/nclassifiers) \
-    #                  for k in range(nclassifiers)]
+if args.use_switch:
+    classifiers_lr = [base_lr for k in range(args.nb_class)]
+    #classifiers_lr = [np.exp(np.log(minlr) + k * (np.log(maxlr) - np.log(minlr))/args.nb_class) \
+    #                  for k in range(args.nb_class)]
     lr_model = generator_lr(net.model, lr_sampler)
 
     optimizer = SGDSwitch(net.parameters_model(),
@@ -174,14 +173,16 @@ if use_switch:
                           net.classifiers_parameters_list(),
                           classifiers_lr)
 else:
-    optimizer = optim.Adam(net.parameters(), lr=base_lr)
-
+    if args.optimizer == 'SGD':
+        optimizer = optim.SGD(net.parameters(), lr=base_lr)
+    elif args.optimizer == 'Adam':
+        optimizer = optim.Adam(net.parameters(), lr=base_lr)
 
 
 # Training
 def train(epoch):
     net.train()
-    if use_switch:
+    if args.use_switch:
         optimizer.update_posterior(net.posterior())
     train_loss = 0
     correct = 0
@@ -202,7 +203,7 @@ def train(epoch):
         loss = criterion(outputs, targets)
         loss.backward()
 
-        if use_switch:
+        if args.use_switch:
             newx = Variable(net.last_x.data.clone())
             for classifier in net.classifiers():
                 loss_classifier = criterion(classifier(newx).log(), targets)
@@ -217,13 +218,15 @@ def train(epoch):
         pbar.update(batch_size)
         postfix = OrderedDict([("LossTrain","{:.4f}".format(train_loss/(batch_idx+1))),
                                ("AccTrain", "{:.3f}".format(100.*correct/total))])
-        if use_switch:
+        if args.use_switch:
             postfix["PostSw"] = net.repr_posterior()
         pbar.set_postfix(postfix)
-        if use_switch:
+        if args.use_switch:
             net.update_switch(targets)
             optimizer.update_posterior(net.posterior())
     pbar.close()
+
+    return train_loss / (batch_idx + 1), correct / total
 
 def test(epoch):
     global best_acc
@@ -244,10 +247,16 @@ def test(epoch):
         correct += predicted.eq(targets.data).cpu().sum()
 
     print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
-    if use_switch:
-        print(("Posterior : "+"{:.3f}, " * nclassifiers).format(*net.posterior()))
+    if args.use_switch:
+        print(("Posterior : "+"{:.3f}, " * args.nb_class).format(*net.posterior()))
 
+    return test_loss / (batch_idx + 1), correct / total
 
+t_init = time.time()
 for epoch in range(args.epochs):
-    train(epoch)
-    test(epoch)
+    train_nll, train_acc = train(epoch)
+    test_nll, test_acc = test(epoch)
+    outputManager.updateData(epoch, round(time.time() - t_init), \
+                             train_nll, train_acc, \
+                             0, 0, \
+                             test_nll, test_acc)
