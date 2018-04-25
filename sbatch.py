@@ -65,7 +65,8 @@ def build_sbatch(runOpt, sbatchOpt, argsDict):
 def build_srun(runOpt, sbatchOpt, argsDict):
     command_srun = 'srun'
     for opt in sbatchOpt:
-        command_srun += ' ' + opt
+        if ('--output' not in opt) and ('--error' not in opt):
+            command_srun += ' ' + opt
     command_srun += ' --pty bash'
 
     runOpt['temp_file'] = createTempFileName(runOpt['temp_file'])
