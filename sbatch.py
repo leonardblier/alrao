@@ -36,7 +36,7 @@ def send_proc(bashCMD):
     if not error is None:
         print(str(error, 'utf-8').strip(), file = sys.stderr)
 
-# General definitions
+# Script command
 def build_args(argsDict):
     lstArgs = ''
     for name, key in argsDict.items():
@@ -50,25 +50,30 @@ def build_args(argsDict):
             lstArgs += ' --' + name + '=' + repr(key)
     return lstArgs
 
+def build_script_command(runOpt, argsDict):
+    str_args = build_args(argsDict)
+    if 'ipython' in runOpt['command']:
+        str_args = ' --' + str_args
+    return runOpt['command'] + ' ' + runOpt['script'] + str_args
+
+
+# General definitions
 def build_sbatch(runOpt, sbatchOpt, argsDict):
     runOpt['temp_file'] = createTempFileName(runOpt['temp_file'])
+
     f_sbatch = open(runOpt['temp_file'], 'w')
+    f_sbatch.write('#!/bin/bash\n\n')
 
     # Slurm options
-    f_sbatch.write('#!/bin/bash\n\n')
     for opt in sbatchOpt:
         f_sbatch.write('#SBATCH ' + opt + '\n')
     f_sbatch.write('\n')
 
     # Bash part
     f_sbatch.write('source activate ' + runOpt['env_name'] + '\n')
-
-    str_args = build_args(argsDict)
-    if 'ipython' in runOpt['command']:
-        str_args = ' --' + str_args
-    f_sbatch.write(runOpt['command'] + ' ' + runOpt['script'] + str_args + '\n')
-
+    f_sbatch.write(build_script_command(runOpt, argsDict) + '\n')
     f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
+    if not runOpt['keep_temp_file']: f_sbatch.write('rm $0\n')
 
     f_sbatch.close()
 
@@ -80,17 +85,14 @@ def build_srun(runOpt, sbatchOpt, argsDict):
     command_srun += ' --pty bash'
 
     runOpt['temp_file'] = createTempFileName(runOpt['temp_file'])
+
     f_sbatch = open(runOpt['temp_file'], 'w')
-
     f_sbatch.write('#!/bin/bash\n\n')
+
     f_sbatch.write('source activate ' + runOpt['env_name'] + '\n')
-
-    str_args = build_args(argsDict)
-    if 'ipython' in runOpt['command']:
-        str_args = ' --' + str_args
-    f_sbatch.write(runOpt['command'] + ' ' + runOpt['script'] + str_args + '\n')
-
+    f_sbatch.write(build_script_command(runOpt, argsDict) + '\n')
     f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
+    if not runOpt['keep_temp_file']: f_sbatch.write('rm $0\n')
 
     f_sbatch.close()
     return command_srun
@@ -111,40 +113,28 @@ def build_bash(runOpt, argsDict):
 
     f_sbatch.close()
 
-def build_bash_command(runOpt, argsDict):
-    str_args = build_args(argsDict)
-    if 'ipython' in runOpt['command']:
-        str_args = ' --' + str_args
-    return runOpt['command'] + ' ' + runOpt['script'] + str_args
-
 def launch_exp(runOpt, sbatchOpt, argsDict):
     if runOpt['use_slurm']:
-        build_sbatch(runOpt, sbatchOpt, argsDict)
-        bashCMD = 'sbatch ' + runOpt['temp_file']
-        proc = subprocess.Popen(bashCMD.split(), stdout = subprocess.PIPE)
-        output, error = proc.communicate()
-
-        if not output is None:
-            print(str(output, 'utf-8').strip())
-        if not error is None:
-            print(str(error, 'utf-8').strip(), file = sys.stderr)
-
-        if not runOpt['keep_temp_file']:
-            bashCMD = 'rm ' + runOpt['temp_file']
-            proc = subprocess.Popen(bashCMD.split(), stdout = subprocess.PIPE)
-            output, error = proc.communicate()
-
-            if not output is None:
-                print(str(output, 'utf-8').strip())
-            if not error is None:
-                print(str(error, 'utf-8').strip(), file = sys.stderr)
+        if runOpt['interactive']:
+            command_srun = build_srun(runOpt, sbatchOpt, argsDict)
+            print('run:  ' + command_srun + '\n')
+            print('then: bash ' + runOpt['temp_file'] + '\n')
+        else:
+            build_sbatch(runOpt, sbatchOpt, argsDict)
+            send_proc('sbatch ' + runOpt['temp_file'])
     else:
+        runOpt['interactive'] = True
+        command_srun = build_srun(runOpt, sbatchOpt, argsDict)
+        print('run:  bash ' + runOpt['temp_file'] + '\n')
+
+        """
         bashCMD = 'source activate ' + runOpt['env_name']
         bashCMD += ';' + build_bash_command(runOpt, argsDict)
         if 'ipython' in runOpt['command']:
             bashCMD += ';bash'
         bashCMD += ';source deactivate ' + runOpt['env_name']
         os.system('bash -c "' + bashCMD + '"')
+        """
         """
         os.system('bash -c "source activate ' + runOpt['env_name'] + '"')
         if 'ipython' in runOpt['command']:
