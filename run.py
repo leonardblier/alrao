@@ -5,7 +5,8 @@ from sbatch import launch_exp
 nb_expes = 1 # number of experiments per set of parameters
 
 runOpt = {'env_name': 'pytorch', # name of the environment to be activated
-          'use_slurm': True, # if True, executes the script automatically with sbatch
+          'use_slurm': False, # if True, executes the script automatically with sbatch
+          'interactive': False,
           'command': 'python', # 'python', 'ipython -i'
           'script': 'main.py',
           'temp_file': 'temp_run.sh',
