@@ -6,13 +6,24 @@ nb_expes = 1 # number of experiments per set of parameters
 
 runOpt = {'env_name': 'pytorch', # name of the environment to be activated
           'use_slurm': True, # if True, read the slurm options
-          'interactive': True, # automatically set to True if use_slurm is False
-                               # if False, executes the script automatically with sbatch
+          'interactive': True, # must be True if you run an interactive job
+                               # if use_slurm is True and interactive is False,
+                               #     run the script with sbatch
           'command': 'python', # 'python', 'ipython -i'
           'script': 'main.py',
           'temp_file': 'temp_run.sh',
           'keep_temp_file': True}
 
+"""
+Notes:
+  1) if your job is interactive, it is NOT launched automatically; this program
+     outputs the commands you have to run
+  2) to launch a grid of experiments, you must set use_slurm=True and
+     interactive=False
+  3) if you already run the command 'srun <...> --pty bash', you must set
+     use_slurm=False
+  4) if you set 'use_slurm' to False, your job is supposed to be interactive
+"""
 
 # List of options added when launching 'py_file_name'
 argsDict = {'epochs': 1,
