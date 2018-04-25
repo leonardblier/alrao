@@ -1,3 +1,4 @@
+import os
 import sys
 import subprocess
 from pathlib import Path
@@ -85,13 +86,25 @@ def build_srun(runOpt, sbatchOpt, argsDict):
     f_sbatch.close()
     return command_srun
 
+def build_bash(runOpt, argsDict):
+    runOpt['temp_file'] = createTempFileName(runOpt['temp_file'])
+    f_sbatch = open(runOpt['temp_file'], 'w')
+
+    f_sbatch.write('#!/bin/bash\n\n')
+    f_sbatch.write('source activate ' + runOpt['env_name'] + '\n')
+
+    str_args = build_args(argsDict)
+    if 'ipython' in runOpt['command']:
+        str_args = ' --' + str_args
+    f_sbatch.write(runOpt['command'] + ' ' + runOpt['script'] + str_args + '\n')
+
+    f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
+
+    f_sbatch.close()
+    return command_srun
+
 def launch_exp(runOpt, sbatchOpt, argsDict):
-    if runOpt['interactive']:
-        command_srun = build_srun(runOpt, sbatchOpt, argsDict)
-        print('Interactive job to launch: ' + runOpt['temp_file'] + '\n')
-        proc = subprocess.Popen(command_srun.split(), stdout = subprocess.PIPE)
-        output, error = proc.communicate()
-    else:
+    if runOpt['use_slurm']:
         build_sbatch(runOpt, sbatchOpt, argsDict)
         bashCMD = 'sbatch ' + runOpt['temp_file']
         proc = subprocess.Popen(bashCMD.split(), stdout = subprocess.PIPE)
@@ -101,3 +114,29 @@ def launch_exp(runOpt, sbatchOpt, argsDict):
             print(str(output, 'utf-8').strip())
         if not error is None:
             print(str(error, 'utf-8').strip(), file = sys.stderr)
+
+        if not runOpt['keep_temp_file']:
+            bashCMD = 'rm ' + runOpt['temp_file']
+            proc = subprocess.Popen(bashCMD.split(), stdout = subprocess.PIPE)
+            output, error = proc.communicate()
+
+            if not output is None:
+                print(str(output, 'utf-8').strip())
+            if not error is None:
+                print(str(error, 'utf-8').strip(), file = sys.stderr)
+    else:
+        build_bash(runOpt, argsDict)
+        bashCMD = 'bash ' + runOpt['temp_file']
+        proc = subprocess.Popen(bashCMD.split(), stdout = subprocess.PIPE)
+        output, error = proc.communicate()
+
+        if not output is None:
+            print(str(output, 'utf-8').strip())
+        if not error is None:
+            print(str(error, 'utf-8').strip(), file = sys.stderr)
+        """
+        command_srun = build_srun(runOpt, sbatchOpt, argsDict)
+        print('Interactive job to launch: ' + runOpt['temp_file'] + '\n')
+        proc = subprocess.Popen(command_srun.split(), stdout = subprocess.PIPE)
+        output, error = proc.communicate()
+        """
