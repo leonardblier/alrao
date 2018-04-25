@@ -4,11 +4,13 @@ from sbatch import launch_exp
 
 nb_expes = 1 # number of experiments per set of parameters
 
-runOpt = {'command': 'ipython -i', # 'python', 'ipython -i'
+runOpt = {'env_name': 'pytorch', # name of the environment to be activated
+          'use_slurm': False, # if True, executes the script automatically with sbatch
+          'command': 'ipython -i', # 'python', 'ipython -i'
           'script': 'main.py',
-          'env_name': 'pytorch', # name of the environment to be activated
           'temp_file': 'temp_run.sh',
-          'interactive': True}
+          'keep_temp_file': False}
+
 
 # List of options added when launching 'py_file_name'
 argsDict = {'epochs': 1,
