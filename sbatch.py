@@ -58,6 +58,19 @@ def build_script_command(runOpt, argsDict):
 
 
 # General definitions
+def build_bash_part(f_sbatch, runOpt, argsDict):
+    f_sbatch.write('#TEMPORARY_FILE\n')
+    if runOpt['keep_temp_file']: f_sbatch.write('#KEEP_FILE\n')
+    f_sbatch.write('\n')
+
+    f_sbatch.write('source activate ' + runOpt['env_name'] + '\n')
+    f_sbatch.write(build_script_command(runOpt, argsDict) + '\n')
+    f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
+    f_sbatch.write('\n')
+
+    f_sbatch.write('echo "#USED_FILE" >> $0\n')
+    if not runOpt['keep_temp_file']: f_sbatch.write('rm $0\n')
+
 def build_sbatch(runOpt, sbatchOpt, argsDict):
     runOpt['temp_file'] = createTempFileName(runOpt['temp_file'])
 
@@ -70,82 +83,39 @@ def build_sbatch(runOpt, sbatchOpt, argsDict):
     f_sbatch.write('\n')
 
     # Bash part
-    f_sbatch.write('source activate ' + runOpt['env_name'] + '\n')
-    f_sbatch.write(build_script_command(runOpt, argsDict) + '\n')
-    f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
-    if not runOpt['keep_temp_file']: f_sbatch.write('rm $0\n')
+    build_bash_part(f_sbatch, runOpt, argsDict)
 
     f_sbatch.close()
 
 def build_srun(runOpt, sbatchOpt, argsDict):
+    # Slurm options
     command_srun = 'srun'
     for opt in sbatchOpt:
         if ('--output' not in opt) and ('--error' not in opt):
             command_srun += ' ' + opt
     command_srun += ' --pty bash'
 
+    # Bash part
     runOpt['temp_file'] = createTempFileName(runOpt['temp_file'])
 
     f_sbatch = open(runOpt['temp_file'], 'w')
     f_sbatch.write('#!/bin/bash\n\n')
 
-    f_sbatch.write('source activate ' + runOpt['env_name'] + '\n')
-    f_sbatch.write(build_script_command(runOpt, argsDict) + '\n')
-    f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
-    if not runOpt['keep_temp_file']: f_sbatch.write('rm $0\n')
+    build_bash_part(f_sbatch, runOpt, argsDict)
 
     f_sbatch.close()
     return command_srun
-
-def build_bash(runOpt, argsDict):
-    runOpt['temp_file'] = createTempFileName(runOpt['temp_file'])
-    f_sbatch = open(runOpt['temp_file'], 'w')
-
-    f_sbatch.write('#!/bin/bash\n\n')
-    f_sbatch.write('source activate ' + runOpt['env_name'] + '\n')
-
-    str_args = build_args(argsDict)
-    if 'ipython' in runOpt['command']:
-        str_args = ' --' + str_args
-    f_sbatch.write(runOpt['command'] + ' ' + runOpt['script'] + str_args + '\n')
-
-    f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
-
-    f_sbatch.close()
 
 def launch_exp(runOpt, sbatchOpt, argsDict):
     if runOpt['use_slurm']:
         if runOpt['interactive']:
             command_srun = build_srun(runOpt, sbatchOpt, argsDict)
-            print('run:  ' + command_srun + '\n')
-            print('then: bash ' + runOpt['temp_file'] + '\n')
+            print(command_srun)
+            print('bash ' + runOpt['temp_file'])
         else:
             build_sbatch(runOpt, sbatchOpt, argsDict)
             send_proc('sbatch ' + runOpt['temp_file'])
     else:
         runOpt['interactive'] = True
         command_srun = build_srun(runOpt, sbatchOpt, argsDict)
-        print('run:  bash ' + runOpt['temp_file'] + '\n')
-
-        """
-        bashCMD = 'source activate ' + runOpt['env_name']
-        bashCMD += ';' + build_bash_command(runOpt, argsDict)
-        if 'ipython' in runOpt['command']:
-            bashCMD += ';bash'
-        bashCMD += ';source deactivate ' + runOpt['env_name']
-        os.system('bash -c "' + bashCMD + '"')
-        """
-        """
-        os.system('bash -c "source activate ' + runOpt['env_name'] + '"')
-        if 'ipython' in runOpt['command']:
-            os.system('bash -c "' + build_bash_command(runOpt, argsDict) + ';bash"')
-        else:
-            os.system('bash -c "' + build_bash_command(runOpt, argsDict) + '"')
-        os.system('bash -c "source deactivate ' + runOpt['env_name'] + '"')
-        """
-        """
-        command_srun = build_srun(runOpt, sbatchOpt, argsDict)
-        print('Interactive job to launch: ' + runOpt['temp_file'] + '\n')
-        proc = subprocess.Popen(command_srun.split(), stdout = subprocess.PIPE)
-        output, error = proc.communicate()
-        """
+        print('bash ' + runOpt['temp_file'])

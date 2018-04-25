@@ -5,12 +5,13 @@ from sbatch import launch_exp
 nb_expes = 1 # number of experiments per set of parameters
 
 runOpt = {'env_name': 'pytorch', # name of the environment to be activated
-          'use_slurm': False, # if True, executes the script automatically with sbatch
-          'interactive': False,
+          'use_slurm': True, # if True, read the slurm options
+          'interactive': True, # automatically set to True if use_slurm is False
+                               # if False, executes the script automatically with sbatch
           'command': 'python', # 'python', 'ipython -i'
           'script': 'main.py',
           'temp_file': 'temp_run.sh',
-          'keep_temp_file': False}
+          'keep_temp_file': True}
 
 
 # List of options added when launching 'py_file_name'

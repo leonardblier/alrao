@@ -26,6 +26,8 @@ from output import OutputManager
 
 import pdb
 
+#pdb.set_trace()
+
 torch.manual_seed(123)
 
 args = parseArgs()
