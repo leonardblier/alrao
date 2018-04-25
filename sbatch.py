@@ -27,6 +27,15 @@ def createTempFileName(temp_file_name):
 
     return ret_file_name
 
+def send_proc(bashCMD):
+    proc = subprocess.Popen(bashCMD.split(), stdout = subprocess.PIPE)
+    output, error = proc.communicate()
+
+    if not output is None:
+        print(str(output, 'utf-8').strip())
+    if not error is None:
+        print(str(error, 'utf-8').strip(), file = sys.stderr)
+
 # General definitions
 def build_args(argsDict):
     lstArgs = ''
@@ -101,7 +110,12 @@ def build_bash(runOpt, argsDict):
     f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
 
     f_sbatch.close()
-    return command_srun
+
+def build_bash_command(runOpt, argsDict):
+    str_args = build_args(argsDict)
+    if 'ipython' in runOpt['command']:
+        str_args = ' --' + str_args
+    return runOpt['command'] + ' ' + runOpt['script'] + str_args
 
 def launch_exp(runOpt, sbatchOpt, argsDict):
     if runOpt['use_slurm']:
@@ -125,15 +139,20 @@ def launch_exp(runOpt, sbatchOpt, argsDict):
             if not error is None:
                 print(str(error, 'utf-8').strip(), file = sys.stderr)
     else:
-        build_bash(runOpt, argsDict)
-        bashCMD = 'bash ' + runOpt['temp_file']
-        proc = subprocess.Popen(bashCMD.split(), stdout = subprocess.PIPE)
-        output, error = proc.communicate()
-
-        if not output is None:
-            print(str(output, 'utf-8').strip())
-        if not error is None:
-            print(str(error, 'utf-8').strip(), file = sys.stderr)
+        bashCMD = 'source activate ' + runOpt['env_name']
+        bashCMD += ';' + build_bash_command(runOpt, argsDict)
+        if 'ipython' in runOpt['command']:
+            bashCMD += ';bash'
+        bashCMD += ';source deactivate ' + runOpt['env_name']
+        os.system('bash -c "' + bashCMD + '"')
+        """
+        os.system('bash -c "source activate ' + runOpt['env_name'] + '"')
+        if 'ipython' in runOpt['command']:
+            os.system('bash -c "' + build_bash_command(runOpt, argsDict) + ';bash"')
+        else:
+            os.system('bash -c "' + build_bash_command(runOpt, argsDict) + '"')
+        os.system('bash -c "source deactivate ' + runOpt['env_name'] + '"')
+        """
         """
         command_srun = build_srun(runOpt, sbatchOpt, argsDict)
         print('Interactive job to launch: ' + runOpt['temp_file'] + '\n')
