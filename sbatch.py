@@ -68,8 +68,9 @@ def build_bash_part(f_sbatch, runOpt, argsDict):
     f_sbatch.write('source deactivate ' + runOpt['env_name'] + '\n')
     f_sbatch.write('\n')
 
-    f_sbatch.write('echo "#USED_FILE" >> $0\n')
-    if not runOpt['keep_temp_file']: f_sbatch.write('rm $0\n')
+    if not (runOpt['use_slurm'] and not runOpt['interactive']):
+        f_sbatch.write('echo "#USED_FILE" >> $0\n')
+        if not runOpt['keep_temp_file']: f_sbatch.write('rm $0\n')
 
 def build_sbatch(runOpt, sbatchOpt, argsDict):
     runOpt['temp_file'] = createTempFileName(runOpt['temp_file'])
@@ -110,11 +111,17 @@ def launch_exp(runOpt, sbatchOpt, argsDict):
     if runOpt['use_slurm']:
         if runOpt['interactive']:
             command_srun = build_srun(runOpt, sbatchOpt, argsDict)
-            print(command_srun)
-            print('bash ' + runOpt['temp_file'])
+            print('run: ' + command_srun)
+            print('run: bash ' + runOpt['temp_file'])
         else:
             build_sbatch(runOpt, sbatchOpt, argsDict)
             send_proc('sbatch ' + runOpt['temp_file'])
+            if not runOpt['keep_temp_file']:
+                send_proc('rm ' + runOpt['temp_file'])
+            else:
+                f_sbatch = open(runOpt['temp_file'], 'a')
+                f_sbatch.write('#USED_FILE\n')
+                f_sbatch.close()
     else:
         runOpt['interactive'] = True
         command_srun = build_srun(runOpt, sbatchOpt, argsDict)
