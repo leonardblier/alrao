@@ -212,10 +212,10 @@ def train(epoch):
                 loss_classifier.backward()
         optimizer.step()
 
-        train_loss += loss.data[0]
+        train_loss += loss.data.item()
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
-        correct += predicted.eq(targets.data).cpu().sum()
+        correct += predicted.eq(targets.data).cpu().sum().item()
 
         pbar.update(batch_size)
         postfix = OrderedDict([("LossTrain","{:.4f}".format(train_loss/(batch_idx+1))),
@@ -243,10 +243,10 @@ def test(epoch):
         outputs = net(inputs)
         loss = criterion(outputs, targets)
 
-        test_loss += loss.data[0]
+        test_loss += loss.data.item()
         _, predicted = torch.max(outputs.data, 1)
         total += targets.size(0)
-        correct += predicted.eq(targets.data).cpu().sum()
+        correct += predicted.eq(targets.data).cpu().sum().item()
 
     print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
     if args.use_switch:
