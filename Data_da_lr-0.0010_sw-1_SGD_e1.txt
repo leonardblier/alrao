@@ -1,2 +1,0 @@
-epoch	time	train_nll	train_acc	valid_nll	valid_acc	test_nll	test_acc
-0	44	2.45293852587795	0.1279	0	0	2.483441598855766	0.1
