@@ -36,7 +36,7 @@ outputManager = OutputManager(args)
 use_cuda = torch.cuda.is_available()
 best_acc = 0  # best test accuracy
 
-batch_size = 64
+batch_size = 100
 # TODO : Verifier aue le switch et ses updates se passent bien avec les mini-batchs
 
 # Data
@@ -135,7 +135,7 @@ class StandardModel(nn.Module):
     def forward(self, x):
         x = self.model(x)
         out = self.classifier(x)
-        return out.log()
+        return F.log_softmax(out, dim = 1)
 
 base_lr = args.lr
 minlr = args.minLR

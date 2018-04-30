@@ -35,3 +35,15 @@ da_lr-0.0001_SGD_K1_e500
 da_lr-0.0010_SGD_K1_e500
 da_lr-0.0100_SGD_K1_e500
 da_lr-0.1000_SGD_K1_e500
+da_lr-0.0010_SGD_K1_e10
+da_lr-0.1000_SGD_K1_e500_grid_lr
+da_lr-0.0010_SGD_K1_e500_grid_lr
+da_lr-0.0100_SGD_K1_e500_grid_lr
+da_lr-0.0001_SGD_K1_e500_grid_lr
+da_lr-0.1000_SGD_K1_e500_grid_lr
+da_lr-0.0010_SGD_K1_e500_grid_lr
+da_lr-0.0100_SGD_K1_e500_grid_lr
+da_lr-0.0001_SGD_K1_e500_grid_lr
+da_lr-0.0100_SGD_K1_e10_grid_lr
+da_lr-0.1000_SGD_K1_e20_grid_lr
+da_lr-0.1000_SGD_K1_e20_debug

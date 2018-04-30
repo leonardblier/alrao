@@ -5,8 +5,8 @@ from sbatch import launch_exp
 nb_expes = 1 # number of experiments per set of parameters
 
 runOpt = {'env_name': 'pytorch', # name of the environment to be activated
-          'use_slurm': True, # if True, read the slurm options
-          'interactive': False, # must be True if you run an interactive job
+          'use_slurm': False, # if True, read the slurm options
+          'interactive': True, # must be True if you run an interactive job
                                # if use_slurm is True and interactive is False,
                                #     run the script with sbatch
           'command': 'python', # 'python', 'ipython -i'
@@ -26,11 +26,11 @@ Notes:
 """
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 500,
+argsDict = {'epochs': 20,
             'size_multiplier': 1,
 
             'optimizer': 'SGD',
-            'lr': .001,
+            'lr': .1,
             'use_switch': False,
             'minLR': -5,
             'maxLR': 0,
@@ -41,7 +41,7 @@ argsDict = {'epochs': 500,
 #            'penalty': True,
 #            'dropOut': 0, # def: 0
 
-            'suffix': '', # def: ''
+            'suffix': 'debug', # def: ''
             'exp_number': -1, # def: -1
             'stats': False}
 
@@ -57,10 +57,10 @@ sbatchOpt = ['--job-name=mixed_lr',
 #             '--exclude=titanic-2']
 
 # Exp Test
-#launch_exp(runOpt, sbatchOpt, argsDict)
+launch_exp(runOpt, sbatchOpt, argsDict)
 
 # Send the tasks
-
+"""
 gridDict = {'lr': [.0001, .001, .01, .1]}
 for argsDict['lr'] in gridDict['lr']:
     if nb_expes > 1:
@@ -69,7 +69,7 @@ for argsDict['lr'] in gridDict['lr']:
             launch_exp(runOpt, sbatchOpt, argsDict)
     else:
         launch_exp(runOpt, sbatchOpt, argsDict)
-
+"""
 
 """
 gridDict = {'size_multiplier': [1, 2, 3],
