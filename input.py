@@ -43,7 +43,7 @@ def parseArgs():
                         help = 'number of classifiers before the switch')
     parser.add_argument('--stats', action = 'store_true', default = False, \
                         help = 'outputs PDF with stats over weights')
-    parser.add_argument('--size_multiplier', type = float, default = 1, \
+    parser.add_argument('--size_multiplier', type = int, default = 1, \
                         help = 'multiplier of the number of neurons per layer (default: 1)')
 
     # print options

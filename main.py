@@ -30,6 +30,7 @@ from output import OutputManager
 
 import pdb
 
+<<<<<<< HEAD
 from utils import *
 
 #torch.manual_seed(123)
@@ -40,22 +41,8 @@ class Args:
     def __init__(self):
         pass
 
-args = Args()
-args_dict = {'epochs': 100,
-        'size_multiplier': 1,
-        'optimizer': 'Adam',
-        'lr': .1,
-        'use_switch': False,
-        'minLR': -5,
-        'maxLR': 0,
-        'nb_class': 20,
-        'data_augm': True,
-        'suffix': '', # def: ''
-        'exp_number': -1, # def: -1
-        'stats': False}
-for name, value in args_dict.items():
-    setattr(args, name, value)
-    
+
+torch.manual_seed(123)
 
 outputManager = OutputManager(args)
 
@@ -179,7 +166,6 @@ class StandardModel(nn.Module):
         x = self.model(x)
         return self.classifier(x)
 
-
 base_lr = args.lr
 minlr = 10 ** args.minLR
 maxlr = 10 ** args.maxLR
@@ -280,10 +266,18 @@ def train(epoch):
         # print("After Aux Gradient:")
         # l2params(net)
         optimizer.step()
+<<<<<<< HEAD
         train_loss += loss.item()
         _, predicted = torch.max(outputs, 1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
+=======
+
+        train_loss += loss.data.item()
+        _, predicted = torch.max(outputs.data, 1)
+        total += targets.size(0)
+        correct += predicted.eq(targets.data).cpu().sum().item()
+>>>>>>> 142c8833cd253982bae228e504d98e17df9c69de
 
         pbar.update(batch_size)
         postfix = OrderedDict([("LossTrain","{:.4f}".format(train_loss/(batch_idx+1))),
@@ -326,6 +320,7 @@ def test(epoch):
         #inputs, targets = Variable(inputs, volatile=True), Variable(targets)
         outputs = net(inputs)
         loss = criterion(outputs, targets)
+
 
         test_loss += loss.item()
         _, predicted = torch.max(outputs, 1)

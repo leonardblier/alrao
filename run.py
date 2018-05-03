@@ -2,15 +2,35 @@ import sys
 import subprocess
 from sbatch import launch_exp
 
-py_file_name = 'main.py'
-nb_expes = 1 # number of experiment per set of parameters
+nb_expes = 1 # number of experiments per set of parameters
+
+runOpt = {'env_name': 'pytorch', # name of the environment to be activated
+          'use_slurm': False, # if True, read the slurm options
+          'interactive': True, # must be True if you run an interactive job
+                               # if use_slurm is True and interactive is False,
+                               #     run the script with sbatch
+          'command': 'python', # 'python', 'ipython -i'
+          'script': 'main.py',
+          'temp_file': 'temp_run.sh',
+          'keep_temp_file': False}
+
+"""
+Notes:
+  1) if your job is interactive, it is NOT launched automatically; this program
+     outputs the commands you have to run
+  2) to launch a grid of experiments, you must set use_slurm=True and
+     interactive=False
+  3) if you already run the command 'srun <...> --pty bash', you must set
+     use_slurm=False
+  4) if you set 'use_slurm' to False, your job is supposed to be interactive
+"""
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 5,
+argsDict = {'epochs': 20,
             'size_multiplier': 1,
 
-            'optimizer': 'Adam',
-            'lr': .001,
+            'optimizer': 'SGD',
+            'lr': .1,
             'use_switch': False,
             'minLR': -5,
             'maxLR': 0,
@@ -21,7 +41,7 @@ argsDict = {'epochs': 5,
 #            'penalty': True,
 #            'dropOut': 0, # def: 0
 
-            'suffix': '', # def: ''
+            'suffix': 'debug', # def: ''
             'exp_number': -1, # def: -1
             'stats': False}
 
@@ -36,17 +56,20 @@ sbatchOpt = ['--job-name=mixed_lr',
              '-C pascal'] #,
 #             '--exclude=titanic-2']
 
-# Name of the temporary file to be launched with slurm (sbatch)
-temp_file_name = 'temp_run.sh'
+# Exp Test
+launch_exp(runOpt, sbatchOpt, argsDict)
 
 # Send the tasks
-if nb_expes > 1:
-    for i in range(nb_expes):
-        argsDict['exp_number'] = i
-        launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
-else:
-    launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
-
+"""
+gridDict = {'lr': [.0001, .001, .01, .1]}
+for argsDict['lr'] in gridDict['lr']:
+    if nb_expes > 1:
+        for i in range(nb_expes):
+            argsDict['exp_number'] = i
+            launch_exp(runOpt, sbatchOpt, argsDict)
+    else:
+        launch_exp(runOpt, sbatchOpt, argsDict)
+"""
 
 """
 gridDict = {'size_multiplier': [1, 2, 3],
@@ -56,7 +79,7 @@ for argsDict['size_multiplier'] in gridDict['size_multiplier']:
         if nb_expes > 1:
             for i in range(nb_expes):
                 argsDict['exp_number'] = i
-                launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
+                launch_exp(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict)
         else:
-            launch_exp(py_file_name, temp_file_name, sbatchOpt, argsDict)
+            launch_exp(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict)
 """
