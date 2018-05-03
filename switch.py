@@ -25,17 +25,16 @@ class Switch(nn.Module):
 
         self.save_cl_perf = save_cl_perf
         
-        #self.register_buffer("logw_a", torch.FloatTensor(nb_models))
-        #self.register_buffer("logw_b", torch.FloatTensor(nb_models))
-
-        self.register_buffer("logw", torch.zeros((2, nb_models)))
+        self.register_buffer("logw",
+            torch.zeros((2, nb_models), requires_grad=False)
+        )
+        self.register_buffer("logposterior",
+            torch.full((nb_models,), -np.log(nb_models), requires_grad=False)
+        )
+        self.logw[0].fill_(np.log(theta))
+        self.logw[1].fill_(np.log(1 - theta))
+        self.logw -= np.log(nb_models)
         
-        self.register_buffer("logposterior", torch.FloatTensor(nb_models))
-
-        self.logw[0].fill_(np.log(theta * (1 / nb_models)))
-        self.logw[1].fill_(np.log((1 - theta) * (1 / nb_models)))
-        
-        self.logposterior.fill_(- np.log(nb_models))
         if self.save_cl_perf:
             self.reset_cl_perf()
             
@@ -54,51 +53,48 @@ class Switch(nn.Module):
         """
         return (1.-self.alpha)
     
-    def Supdate(self, lst_x, y):
+    def Supdate(self, lst_logpx, y):
         """
         This implements algorithm 1 in "Catching Up Faster in Bayesian 
         Model Selection and Model Averaging
         """
         if self.save_cl_perf:
             self.cl_total += 1
-            for (k, x) in enumerate(lst_x):
-                self.cl_loss[k] += nn.NLLLoss()(x, y).data[0]
-                self.cl_correct[k] += (torch.min(x.data, 1)[1]).eq(y.data).sum() / y.size()[0]
-                
-        # px is the tensor of the log probabilities of the mini-batch for each classifier
-        px = torch.cat([-F.nll_loss(x.log(), y) for x in lst_x]).data
+            for (k, x) in enumerate(lst_logpx):
+                self.cl_loss[k] += F.nll_loss(x, y).item()
+                self.cl_correct[k] += (torch.max(x, 1)[1]).eq(y.data).sum().item() / y.size()[0]
 
+        
+        # px is the tensor of the log probabilities of the mini-batch for each classifier
+        logpx = torch.stack([-F.nll_loss(x, y, size_average=True) for x in lst_logpx],
+                            dim=0).detach()
         from math import isnan
-        if any(isnan(p) for p in px):
+        if any(isnan(p) for p in logpx):
             stop
         if self.nb_models == 1:
             return None
 
-        self.logw += px
+        self.logw += logpx
         pit = self.piT(self.t)
-        logpool = np.log(pit) + log_sum_exp(self.logw[0])
+        logpool = log_sum_exp(self.logw[0]) +  np.log(pit)
         self.logw[0] += np.log(1 - pit)
 
-        addtensor = torch.zeros_like(self.logw).fill_(self.theta)
-        addtensor[1].fill_(1-self.theta)
+        addtensor = torch.zeros_like(self.logw)
+        addtensor[0].fill_(np.log(self.theta))
+        addtensor[1].fill_(np.log(1-self.theta))
 
         self.logw = log_sum_exp(torch.stack([self.logw,
-            addtensor.log() + logpool - np.log(self.nb_models)], dim=0), dim = 0)
+            addtensor + logpool - np.log(self.nb_models)], dim=0), dim = 0)
 
         self.logw -= log_sum_exp(self.logw)
         self.logposterior = log_sum_exp(self.logw, dim=0)
         self.t += 1
 
-    def forward(self, lst_x):
-        tensor_x = torch.stack(lst_x,-1)
-        ret = tensor_x.matmul(Variable(self.logposterior.exp(), requires_grad=False))
-        self.retain_ret = ret.data
-        return ret
-
-
+    def forward(self, lst_logpx):
+        return log_sum_exp(torch.stack(lst_logpx,-1) + self.logposterior, dim=-1)
     
 
-def log_sum_exp(tensor, dim=None, keepdim=False):
+def log_sum_exp(tensor, dim=None):
     """Numerically stable implementation of the operation
 
     tensor.exp().sum(dim, keepdim).log()
@@ -107,10 +103,7 @@ def log_sum_exp(tensor, dim=None, keepdim=False):
     if dim is not None:
         m, _ = torch.max(tensor, dim=dim, keepdim=True)
         tensor0 = tensor - m
-        if keepdim is False:
-            m = m.squeeze(dim)
-        return m + torch.log(torch.sum(torch.exp(tensor0),
-                                       dim=dim, keepdim=keepdim))
+        return m.squeeze(dim=dim) + torch.log(torch.sum(torch.exp(tensor0),dim=dim))
     else:
         m = torch.max(tensor)
         sum_exp = torch.sum(torch.exp(tensor - m))

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from itertools import chain
 
 class ConvBnReluLayer(nn.Module):
     def __init__(self, nfilter_in, nfilter_out):
@@ -16,8 +17,7 @@ class ConvBnReluLayer(nn.Module):
         x = F.relu(x)
         return x
 
-    def loss(self):
-        return self.conv.weight.pow(2).sum()
+
     
 
 class VGGLayer(nn.Module):
@@ -40,13 +40,26 @@ class VGGLayer(nn.Module):
         x = F.max_pool2d(x, 2, stride = 2)
         return x
 
-    def loss(self):
-        ret = 0
+    def convbnlayers(self):
         for i in range(self.nlayers):
-            convbnrelulayer = getattr(self, "convbnrelu"+str(i))
-            ret += convbnrelu.loss()
-        return ret
-    
+            yield getattr(self, "convbnrelu"+str(i))
+            
+    def named_actgrad(self, prefix=""):
+        for (i, layer) in enumerate(self.convbnlayers()):
+            yield (prefix+"convbnlayer"+str(i), layer.gradact)
+        
+    def keep_actgrad(self):
+        def fun_hook(module, grad_input, grad_output):
+            module.gradact += grad_output[0].pow(2).sum(-1).sum(-1).mean(dim=0)
+            
+        for layer in self.convbnlayers():
+            layer.register_backward_hook(fun_hook)
+
+    def reset_actgrad(self):
+        for layer in self.convbnlayers():
+            layer.gradact = 0.
+            
+            
 
 class VGGNet(nn.Module):
     def __init__(self, K=1):
@@ -62,11 +75,9 @@ class VGGNet(nn.Module):
         #self.fc2 = nn.Linear(512,10)
 
     def forward(self, x):
-        x = self.vgglayer1(x)
-        x = self.vgglayer2(x)
-        x = self.vgglayer3(x)
-        x = self.vgglayer4(x)
-        x = self.vgglayer5(x)
+        for _, layer in self.named_vgglayers():
+            x = layer(x)
+            
         x = x.view(x.size(0), -1)
 
         x = F.dropout(x, p=0.5, training=self.training)
@@ -75,7 +86,33 @@ class VGGNet(nn.Module):
         x = F.dropout(x,p = 0.5, training=self.training)
         return x
 
+    def named_vgglayers(self, prefix=""):
+        for i in range(1,6):
+            name = "vgglayer{}".format(i)
+            yield name, getattr(self, name)
+
+    def named_actgrad(self, prefix=""):
+        for namevgg, layer in self.named_vgglayers():
+            for name, agrad in layer.named_actgrad(prefix=prefix+"."+namevgg+"."): 
+                yield name, agrad
+        yield (prefix+".fc1", self.fc1.gradact)
         
+    def keep_actgrad(self):
+        for _, layer in self.named_vgglayers():
+            layer.keep_actgrad()
+
+        def fun_hook_linear(module, grad_input, grad_output):
+            module.gradact += grad_output[0].pow(2).mean(dim=0)
+        self.fc1.register_backward_hook(fun_hook_linear)
+
+    def reset_actgrad(self):
+        for _, layer in self.named_vgglayers():
+            layer.reset_actgrad()
+        self.fc1.gradact = 0.
+            
+
+
+            
 class LinearClassifier(nn.Module):
     def __init__(self, in_features, n_classes):
         super(LinearClassifier, self).__init__()
@@ -84,7 +121,7 @@ class LinearClassifier(nn.Module):
     def forward(self, x):
         x = self.fc(x)
         #x = F.log_softmax(x, dim=1)
-        x = F.softmax(x, dim=1)
+        x = F.log_softmax(x, dim=1)
         return x
 
 # Residual Block
