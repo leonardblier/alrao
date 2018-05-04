@@ -30,17 +30,11 @@ from output import OutputManager
 
 import pdb
 
-<<<<<<< HEAD
 from utils import *
 
 #torch.manual_seed(123)
 
-#args = parseArgs()
-
-class Args:
-    def __init__(self):
-        pass
-
+args = parseArgs()
 
 torch.manual_seed(123)
 
@@ -80,12 +74,28 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 
+def build_model(model_name, *args, **kwargs):
+    if model_name == "VGG16":
+        return VGG('VGG16')
+    elif model_name == "VGG19":
+        return VGG('VGG19')
+    elif model_name == "GoogLeNet":
+        return GoogLeNet(*args, **kwargs)
+    elif model_name == "MobileNetV2":
+        return MobileNetV2(*args, **kwargs)
+    elif model_name == "DPN92":
+        return DPN92(*args, **kwargs)
+    elif model_name == "SENet18":
+        return SENet18(*args, **kwargs)
+    else:
+        raise ValueError("Unknown model name : {}".format(model_name))
+
 class BigModel(nn.Module):
     def __init__(self, nclassifiers):
         super(BigModel, self).__init__()
         self.switch = Switch(nclassifiers, save_cl_perf=True)        
         #self.model = VGGNet(args.size_multiplier)
-        self.model = GoogLeNet(gamma=args.size_multiplier)
+        self.model = build_model(args.model_name, gamma=args.size_multiplier)
         self.nclassifiers = nclassifiers
 
         for i in range(nclassifiers):
@@ -108,7 +118,6 @@ class BigModel(nn.Module):
         if catch_up:
             self.hard_catch_up()
 
-
     def hard_catch_up(self, threshold=-20):
         logpost = self.switch.logposterior
         weak_cl = [cl for cl, lp in zip(self.classifiers(), logpost) if lp < threshold]
@@ -122,7 +131,7 @@ class BigModel(nn.Module):
             [cl.fc.bias * p for (cl, p) in zip(self.classifiers(), logpost.exp())],
             dim=-1).sum(dim=-1).detach()
         for cl in weak_cl:
-;            cl.fc.weight.data = mean_weight.clone()
+            cl.fc.weight.data = mean_weight.clone()
             cl.fc.bias.data = mean_bias.clone()
 
     def parameters_model(self):
@@ -159,7 +168,7 @@ class BigModel(nn.Module):
 class StandardModel(nn.Module):
     def __init__(self, K=1):
         super(StandardModel, self).__init__()
-        self.model = GoogLeNet(gamma=K)
+        self.model = build_model(args.model_name, gamma=K)
         self.classifier = LinearClassifier(self.model.linearinputdim, 10)
 
     def forward(self, x):
@@ -217,9 +226,9 @@ if args.use_switch:
                           classifiers_lr)
 else:
     if args.optimizer == 'SGD':
-        optimizer = optim.SGD(net.parameters(), lr=base_lr)
-    elif args.optimizer == 'Adam':
         optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=0.9, weight_decay=5e-4)
+    elif args.optimizer == 'Adam':
+        optimizer = optim.Adam(net.parameters(), lr=base_lr)
 
 
 # Training
@@ -266,18 +275,11 @@ def train(epoch):
         # print("After Aux Gradient:")
         # l2params(net)
         optimizer.step()
-<<<<<<< HEAD
         train_loss += loss.item()
         _, predicted = torch.max(outputs, 1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
-=======
 
-        train_loss += loss.data.item()
-        _, predicted = torch.max(outputs.data, 1)
-        total += targets.size(0)
-        correct += predicted.eq(targets.data).cpu().sum().item()
->>>>>>> 142c8833cd253982bae228e504d98e17df9c69de
 
         pbar.update(batch_size)
         postfix = OrderedDict([("LossTrain","{:.4f}".format(train_loss/(batch_idx+1))),

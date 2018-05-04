@@ -4,9 +4,9 @@ from sbatch import launch_exp
 
 nb_expes = 1 # number of experiments per set of parameters
 
-runOpt = {'env_name': 'pytorch', # name of the environment to be activated
-          'use_slurm': False, # if True, read the slurm options
-          'interactive': True, # must be True if you run an interactive job
+runOpt = {'env_name': 'test', # name of the environment to be activated
+          'use_slurm': True, # if True, read the slurm options
+          'interactive': False, # must be True if you run an interactive job
                                # if use_slurm is True and interactive is False,
                                #     run the script with sbatch
           'command': 'python', # 'python', 'ipython -i'
@@ -26,11 +26,11 @@ Notes:
 """
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 20,
+argsDict = {'epochs': 5,
             'size_multiplier': 1,
-
+            'model_name':'GoogLeNet',
             'optimizer': 'SGD',
-            'lr': .1,
+            'lr': .025,
             'use_switch': False,
             'minLR': -5,
             'maxLR': 0,
@@ -41,7 +41,7 @@ argsDict = {'epochs': 20,
 #            'penalty': True,
 #            'dropOut': 0, # def: 0
 
-            'suffix': 'debug', # def: ''
+            'suffix': '', # def: ''
             'exp_number': -1, # def: -1
             'stats': False}
 
@@ -57,8 +57,14 @@ sbatchOpt = ['--job-name=mixed_lr',
 #             '--exclude=titanic-2']
 
 # Exp Test
-launch_exp(runOpt, sbatchOpt, argsDict)
+#for model_name in ['GoogLeNet', 'MobileNetV2', 'SENet18', 'DPN92']:
+for model_name in ['GoogLeNet']:
+    argsDict['model_name'] = model_name
+    for i in range(5):
+        argsDict['exp_number'] = i
+        launch_exp(runOpt, sbatchOpt, argsDict)
 
+    
 # Send the tasks
 """
 gridDict = {'lr': [.0001, .001, .01, .1]}

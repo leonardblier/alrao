@@ -23,6 +23,8 @@ def parseArgs():
                         help = 'add penalty to loss')
 
     # options
+    parser.add_argument('--model_name', default='VGG16', \
+                        help = 'Model {VGG16, VGG19, GoogLeNet, MobileNetV2, DPN92, SENet18}')
     parser.add_argument('--optimizer', default = 'SGD', \
                         help = 'optimizer (default: SGD) {Adam, SGD, RMSprop}')
     parser.add_argument('--lr', type = float, default = .01, \
