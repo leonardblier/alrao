@@ -18,8 +18,6 @@ def genNameBase(args):
     nameBase = ''
 
     addUnderscore = False
-    if args.model_name:
-        nameBase += args.model_name
     if args.penalty:
         nameBase += 'p'
         addUnderscore = True
@@ -32,6 +30,9 @@ def genNameBase(args):
 
     if addUnderscore:
         nameBase += '_'
+
+    if args.model_name:
+        nameBase += args.model_name + '_'
 
     addUnderscore = False
     if args.dropOut != 0:
