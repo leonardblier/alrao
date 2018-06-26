@@ -91,15 +91,15 @@ def build_model(model_name, *args, **kwargs):
         raise ValueError("Unknown model name : {}".format(model_name))
 
 class BigModel(nn.Module):
-    def __init__(self, nclassifiers):
+    def __init__(self, model, nclassifiers, nclasses, classifier):
         super(BigModel, self).__init__()
-        self.switch = Switch(nclassifiers, save_cl_perf=True)        
+        self.switch = Switch(nclassifiers, save_cl_perf=True)
         #self.model = VGGNet(args.size_multiplier)
-        self.model = build_model(args.model_name, gamma=args.size_multiplier)
+        self.model = model #
         self.nclassifiers = nclassifiers
 
         for i in range(nclassifiers):
-            classifier = LinearClassifier(self.model.linearinputdim, 10)
+            classifier = classifier(self.model.linearinputdim, nclasses)
             setattr(self, "classifier"+str(i), classifier)
 
     def forward(self, x):
@@ -193,7 +193,8 @@ def lr_sampler(tensor, size):
 
 
 if args.use_switch:
-    net = BigModel(args.nb_class)
+    model = build_model(args.model_name, gamma=args.size_multiplier)
+    net = BigModel(model, args.nb_class, 10, LinearClassifier)
     total_param = sum(np.prod(p.size()) for p in net.parameters_model())
     total_param += sum(np.prod(p.size()) \
                        for lcparams in net.classifiers_parameters_list() \
@@ -244,7 +245,7 @@ def train(epoch):
     train_loss = 0
     correct = 0
     total = 0
-        
+
     pbar = tqdm(total=len(trainloader.dataset),bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} {postfix}')
     pbar.set_description("Epoch %d" % epoch)
 
@@ -260,7 +261,7 @@ def train(epoch):
         loss = criterion(outputs, targets)
         loss.backward()
 
-        
+
         if args.use_switch:
             optimizer.classifiers_zero_grad()
             newx = net.last_x.detach()
@@ -274,7 +275,7 @@ def train(epoch):
                     maxloss = split_loss.max()
                     maxloss.backward()
                     stop
-        
+
         optimizer.step()
         train_loss += loss.item()
         _, predicted = torch.max(outputs, 1)
@@ -291,7 +292,7 @@ def train(epoch):
         if args.use_switch:
             net.update_switch(targets, catch_up=batch_idx % 20 == 0)
             optimizer.update_posterior(net.posterior())
-            
+
 
         # if args.use_switch:
         #     cl_perf = net.switch.get_cl_perf()
@@ -329,7 +330,7 @@ def test(epoch):
         _, predicted = torch.max(outputs, 1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
-        
+
 
     print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
     if args.use_switch:
@@ -345,7 +346,7 @@ def test(epoch):
 t_init = time.time()
 if args.early_stopping:
     earlystopping = EarlyStopping('min', patience=20)
-    
+
 for epoch in range(args.epochs):
     train_nll, train_acc = train(epoch)
     test_nll, test_acc = test(epoch)
