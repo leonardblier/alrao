@@ -13,7 +13,8 @@ def parseArgs():
     # epochs
     parser.add_argument('--epochs', type = int, default = 1, \
                         help = 'number of epochs for phase 1 (default: 1)')
-
+    parser.add_argument('--early_stopping', action = 'store_true', default = False,
+                        help = 'use early stopping')
     # Drop out
     parser.add_argument('--dropOut', type = float, default = 0, \
                         help = 'drop-out rate in the first phase (default: 0)')
@@ -29,6 +30,8 @@ def parseArgs():
                         help = 'optimizer (default: SGD) {Adam, SGD, RMSprop}')
     parser.add_argument('--lr', type = float, default = .01, \
                         help = 'learning rate (default: .01)')
+    parser.add_argument('--momentum', type = float, default = 0., \
+                        help = 'momentum')
     parser.add_argument('--suffix', default = '', \
                         help = 'suffix for the file name')
     parser.add_argument('--exp_number', type = int, default = -1, \

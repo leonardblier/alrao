@@ -1,3 +1,4 @@
+
 '''MobileNetV2 in PyTorch.
 
 See the paper "Inverted Residuals and Linear Bottlenecks:
@@ -51,21 +52,22 @@ class MobileNetV2(nn.Module):
 
     def __init__(self, num_classes=10, gamma=1):
         super(MobileNetV2, self).__init__()
+        
         # NOTE: change conv1 stride 2 -> 1 for CIFAR10
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.layers = self._make_layers(in_planes=32)
-        self.conv2 = nn.Conv2d(320, 1280, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn2 = nn.BatchNorm2d(1280)
+        self.conv1 = nn.Conv2d(3, gamma*32, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(gamma*32)
+        self.layers = self._make_layers(32, gamma)
+        self.conv2 = nn.Conv2d(gamma*320, gamma*1280, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn2 = nn.BatchNorm2d(gamma*1280)
         #self.linear = nn.Linear(1280, num_classes)
-        self.linearinputdim = 1280
+        self.linearinputdim = gamma*1280
 
-    def _make_layers(self, in_planes):
+    def _make_layers(self, in_planes, gamma):
         layers = []
         for expansion, out_planes, num_blocks, stride in self.cfg:
             strides = [stride] + [1]*(num_blocks-1)
             for stride in strides:
-                layers.append(Block(in_planes, out_planes, expansion, stride))
+                layers.append(Block(gamma*in_planes, gamma*out_planes, expansion, stride))
                 in_planes = out_planes
         return nn.Sequential(*layers)
 

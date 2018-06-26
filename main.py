@@ -22,7 +22,7 @@ from models import *
 from mymodels import LinearClassifier
 from switch import Switch
 from optim_spec import SGDSwitch, SGDSpec, generator_lr
-
+from earlystopping import EarlyStopping
 
 from input import parseArgs
 from output import OutputManager
@@ -180,13 +180,13 @@ minlr = 10 ** args.minLR
 maxlr = 10 ** args.maxLR
 
 
-def lr_sampler(tensor):
+def lr_sampler(tensor, size):
     """
     Takes a torch tensor as input and sample a tensor with same size for
     learning rates
     """
 
-    lr = tensor.new(tensor.size()).uniform_()
+    lr = tensor.new(size).uniform_()
     lr = (lr * (np.log(maxlr) - np.log(minlr)) + np.log(minlr)).exp()
     #lr.fill_(base_lr)
     return lr
@@ -213,8 +213,8 @@ criterion = nn.NLLLoss()
 
 if args.use_switch:
     #classifiers_lr = [base_lr for k in range(args.nb_class)]
-    classifier_minlr = 10 ** (-5)
-    classifier_maxlr = 1.
+    classifier_minlr = minlr
+    classifier_maxlr = maxlr
     classifiers_lr = [np.exp(np.log(classifier_minlr) + k * (np.log(classifier_maxlr) - np.log(classifier_minlr))/args.nb_class) \
                       for k in range(args.nb_class)]
 
@@ -223,10 +223,14 @@ if args.use_switch:
     optimizer = SGDSwitch(net.parameters_model(),
                           lr_model,
                           net.classifiers_parameters_list(),
-                          classifiers_lr)
+                          classifiers_lr,
+                          momentum=args.momentum)
+                          #weight_decay=5e-4)
 else:
     if args.optimizer == 'SGD':
-        optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=0.9, weight_decay=5e-4)
+        #optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=1.,
+        #                      weight_decay=5e-4)
+        optimizer = optim.SGD(net.parameters(), lr=base_lr)
     elif args.optimizer == 'Adam':
         optimizer = optim.Adam(net.parameters(), lr=base_lr)
 
@@ -243,7 +247,6 @@ def train(epoch):
         
     pbar = tqdm(total=len(trainloader.dataset),bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} {postfix}')
     pbar.set_description("Epoch %d" % epoch)
-    #with tqdm(total=100) as pbar:
 
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:
@@ -257,23 +260,21 @@ def train(epoch):
         loss = criterion(outputs, targets)
         loss.backward()
 
-        # print("Before Aux Gradient:")
-        # l2params(net)
-        #print(net.posterior())
+        
         if args.use_switch:
-           newx = net.last_x.detach()
-           for classifier in net.classifiers():
-               loss_classifier = criterion(classifier(newx), targets)
-               loss_classifier.backward()
-               from math import isnan
-               if any(np.any(np.isnan(p.grad.data)) for p in classifier.parameters()):
-                   print("loss classifier:{:.5f}".format(loss_classifier.data[0]))
-                   split_loss = nn.NLLLoss(reduce=False)(classifier(newx), targets)
-                   maxloss = split_loss.max()
-                   maxloss.backward()
-                   stop
-        # print("After Aux Gradient:")
-        # l2params(net)
+            optimizer.classifiers_zero_grad()
+            newx = net.last_x.detach()
+            for classifier in net.classifiers():
+                loss_classifier = criterion(classifier(newx), targets)
+                loss_classifier.backward()
+                from math import isnan
+                if any(np.any(np.isnan(p.grad.data)) for p in classifier.parameters()):
+                    print("loss classifier:{:.5f}".format(loss_classifier.data[0]))
+                    split_loss = nn.NLLLoss(reduce=False)(classifier(newx), targets)
+                    maxloss = split_loss.max()
+                    maxloss.backward()
+                    stop
+        
         optimizer.step()
         train_loss += loss.item()
         _, predicted = torch.max(outputs, 1)
@@ -342,6 +343,9 @@ def test(epoch):
 
 
 t_init = time.time()
+if args.early_stopping:
+    earlystopping = EarlyStopping('min', patience=20)
+    
 for epoch in range(args.epochs):
     train_nll, train_acc = train(epoch)
     test_nll, test_acc = test(epoch)
@@ -349,3 +353,7 @@ for epoch in range(args.epochs):
                              train_nll, train_acc, \
                              0, 0, \
                              test_nll, test_acc)
+    earlystopping.step(test_nll)
+    if args.early_stopping and earlystopping.stop:
+        print("End of Training because of early stopping at epoch {}".format(epoch))
+        break

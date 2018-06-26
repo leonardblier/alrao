@@ -91,22 +91,24 @@ def generator_lr(module, lr_sampler, memo=None):
 
     if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
         memo.add(module.weight)
-        memo.add(module.bias)
-        
-        lrb = lr_sampler(module.bias.data)
-        w = module.weight.data
+        w = module.weight
+        lrb = lr_sampler(w, w.size()[:1])
         lrw = w.new(w.size())
         for k in range(w.size()[0]):
             lrw[k].fill_(lrb[k])
         yield lrw
-        yield lrb
-        return
         
+        if module.bias is not None:
+            memo.add(module.bias)
+            yield lrb
+        return
+            
+            
     for _, p in module._parameters.items():
         if p is not None and p not in memo:
             print("WARNING:NOTIMPLEMENTED LAYER:{}".format(type(module)))
             memo.add(p)
-            plr = lr_sampler(p.data)
+            plr = lr_sampler(p, p.size())
             yield plr
             
     for mname, module in module.named_children():
@@ -124,6 +126,7 @@ class SGDSpec(optim.Optimizer):
         
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
+            
 
     def __setstate__(self, state):
         super(SGD, self).__setstate__(state)
@@ -145,6 +148,7 @@ class SGDSpec(optim.Optimizer):
                 if p.grad is None:
                     continue
 
+                d_p = p.grad.data
                 if weight_decay != 0:
                     d_p.add_(weight_decay, p.data)
                 if momentum != 0:
@@ -154,34 +158,37 @@ class SGDSpec(optim.Optimizer):
                         buf.mul_(momentum).add_(d_p)
                     else:
                         buf = param_state['momentum_buffer']
-                        buf.mul_(momentum).add_(1 - dampening, d_p)
+                        # Warning : Are we sure we want to clamp ?
+                        buf.addcmul_(-momentum, lr_p.sqrt().clamp(0., 1/momentum), buf)
+                        buf.add_(1 - dampening, d_p)
                     if nesterov:
                         d_p = d_p.add(momentum, buf)
                     else:
                         d_p = buf
 
-                d_p = p.grad.data
                 p.data.addcmul_(-1., d_p, lr_p)
                 
 
     
 class SGDSwitch:
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
-                 classifiers_lr):
-        #super(SGDSwitch, self).__init__()
-        self.sgdmodel = SGDSpec(parameters_model, lr_model)
+                 classifiers_lr, momentum=0., weight_decay=0., TMP=True):
+        
+        self.sgdmodel = SGDSpec(parameters_model, lr_model,
+                                momentum=momentum, weight_decay=weight_decay)
         self.classifiers_lr = classifiers_lr
-        self.sgdclassifiers = [optim.SGD(parameters, lr) for parameters, lr in \
-                               zip(classifiers_parameters_list, classifiers_lr)]
-        # self.sgdclassifiers = [optim.Adam(parameters, lr) for parameters, lr in \
-        #                        zip(classifiers_parameters_list, classifiers_lr)]
+        self.sgdclassifiers = \
+            [optim.SGD(parameters, lr, momentum=momentum, weight_decay=weight_decay) \
+             for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
+        
 
     def update_posterior(self, posterior):
         self.posterior = posterior
 
 
     def step(self):
-        self.sgdmodel.step()    
+        if self.sgdmodel is not None:
+            self.sgdmodel.step()    
         for sgdclassifier, posterior, lr in zip(self.sgdclassifiers,
                                                 self.posterior,
                                                 self.classifiers_lr):
@@ -189,8 +196,13 @@ class SGDSwitch:
                 #param_group['lr'] = lr / posterior
                 sgdclassifier.step()
 
+    def classifiers_zero_grad(self):
+        for opt in self.sgdclassifiers:
+            opt.zero_grad()
+
     def zero_grad(self):
-        self.sgdmodel.zero_grad()
+        if self.sgdmodel is not None:
+            self.sgdmodel.zero_grad()
         for opt in self.sgdclassifiers:
             opt.zero_grad()
 

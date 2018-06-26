@@ -26,45 +26,100 @@ Notes:
 """
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 5,
-            'size_multiplier': 1,
+argsDict = {'epochs': 1000,
+            'early_stopping': True,
+#            'size_multiplier': 3,
             'model_name':'GoogLeNet',
             'optimizer': 'SGD',
-            'lr': .025,
-            'use_switch': False,
-            'minLR': -5,
-            'maxLR': 0,
-            'nb_class': 1,
+#            'lr': .025,
+            'use_switch': True,
+#            'minLR': -5,
+#            'maxLR': 1,
+            'nb_class': 10,
             'data_augm': True,
 #            'batchnorm': 'BN',
 
 #            'penalty': True,
 #            'dropOut': 0, # def: 0
 
-            'suffix': '', # def: ''
+            'suffix': 'nomomentum',#'sqrtmomentum',#, # def: ''
             'exp_number': -1, # def: -1
             'stats': False}
+
 
 # List of slurm options
 sbatchOpt = ['--job-name=mixed_lr',
              '--gres=gpu:1',
              '--time=2-00:00:00',
              '-n1',
-             '--no-kill',
+#             '--no-kill',
              '--error=AAA-err-%j.txt',
              '--output=AAA-out-%j.txt',
+#             '-w titanic-2']
              '-C pascal'] #,
 #             '--exclude=titanic-2']
 
-# Exp Test
-#for model_name in ['GoogLeNet', 'MobileNetV2', 'SENet18', 'DPN92']:
-for model_name in ['GoogLeNet']:
-    argsDict['model_name'] = model_name
-    for i in range(5):
-        argsDict['exp_number'] = i
-        launch_exp(runOpt, sbatchOpt, argsDict)
 
+# Exp Test
+lr_list = [1e-6, 1e-5, 1e-4, 0.1, 0.5, 1., 10.]
+lr_list_orig = [.025, .05, .01, .005, .001]
+
+lr_list = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.]
+
+#minmaxlr = [(mini, maxi) for mini in range(-7,2) for maxi in range(mini,3)]
+# minmaxlr = [(mini, mini) for mini in range(-7,3)]
+# for i in range(1):
+#     argsDict['exp_number'] = i
+#     for model_name in ['GoogLeNet', 'MobileNetV2', 'SENet18']:
+#         argsDict['model_name'] = model_name    
+#         argsDict['lr'] = 0.025
+#         argsDict['use_switch'] = True
+
+#         for (minLR, maxLR) in minmaxlr:
+            
+#             argsDict['minLR'] = minLR
+#             argsDict['maxLR'] = maxLR
+            
+#             argsDict['size_multiplier'] = 1
+        
+#             #for momentum in [.1, 1.]:#, 10.]:
+#             print(argsDict)
+#             launch_exp(runOpt, sbatchOpt, argsDict)
+
+#             argsDict['size_multiplier'] = 3
+#             #for momentum in [.1, 1.]:#, 10.]:
+#             launch_exp(runOpt, sbatchOpt, argsDict)
     
+
+#         # argsDict['use_switch'] = False
+#         # argsDict['size_multiplier'] = 1
+#         # for lr in lr_list:
+#         #     argsDict['lr'] = lr
+#         #     for i in range(3):
+#         #         argsDict['exp_number'] = i
+#         #         launch_exp(runOpt, sbatchOpt, argsDict)
+        
+#         # argsDict['use_switch'] = False
+#         # argsDict['size_multiplier'] = 3
+#         # for lr in lr_list:
+#         #     argsDict['lr'] = lr
+#         #     for i in range(3):
+#         #         argsDict['exp_number'] = i
+#         #         launch_exp(runOpt, sbatchOpt, argsDict)
+
+
+argsDict['size_multiplier'] = 1
+for i in range(1):
+    argsDict['exp_number'] = i
+    for model_name in ['GoogLeNet']:
+        argsDict['model_name'] = model_name    
+        argsDict['use_switch'] = False
+
+        for lr in lr_list:
+            argsDict['lr'] = lr
+            launch_exp(runOpt, sbatchOpt, argsDict)
+
+            
 # Send the tasks
 """
 gridDict = {'lr': [.0001, .001, .01, .1]}

@@ -43,22 +43,29 @@ def genNameBase(args):
         nameBase += '_'
 
     nameBase += 'lr-'
-    nameBase += format(args.lr, '.4f')
+    nameBase += format(args.lr, '.1e')
 
-    if args.minLR != args.maxLR and args.use_switch:
+    #if args.minLR != args.maxLR and args.use_switch:
+    if args.use_switch:
         nameBase += '_mLR-'
         nameBase += 'p' if args.minLR >= 0 else 'm'
         nameBase += repr(abs(args.minLR))
         nameBase += 'p' if args.maxLR >= 0 else 'm'
         nameBase += repr(abs(args.maxLR))
 
+    if args.momentum != 0.:
+        nameBase += '_mom' + repr(args.momentum)
+        
     if args.use_switch and args.nb_class != 0:
         nameBase += '_sw-'
         nameBase += repr(args.nb_class)
 
     nameBase += '_' + args.optimizer
     nameBase += '_K' + repr(args.size_multiplier)
-    nameBase += '_e' + repr(args.epochs)
+    if args.early_stopping:
+        nameBase += '_es'
+    else:
+        nameBase += '_e' + repr(args.epochs)
 
     if args.exp_number != -1:
         nameBase += '_exp-'

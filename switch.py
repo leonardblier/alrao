@@ -51,7 +51,7 @@ class Switch(nn.Module):
         """
         Reprent the prior pi_t in algorithm 1
         """
-        return (1.-self.alpha)
+        return 1/(t+1) #(1.-self.alpha)
     
     def Supdate(self, lst_logpx, y):
         """
