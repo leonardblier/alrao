@@ -17,18 +17,18 @@ These optimizers are copies of the original pytorch optimizers with one change:
     this layer, then uses it to update the layer.
 """
 
-                 
+
 class AdamSpec(optim.Optimizer):
     def __init__(self, params, lr_params, betas = (.9, .999), eps = 1e-8,
                  weight_decay=0, amsgrad=False):
-        
+
         defaults = dict(betas=betas, eps=eps, weight_decay=weight_decay,
                         amsgrad=amsgrad)
         super(AdamSpec, self).__init__(params, defaults)
 
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
-            
+
         # self.learning_rate = lr
         # self.named_parameters = OrderedDict(named_parameters)
         # self.named_lr = named_lr
@@ -40,7 +40,7 @@ class AdamSpec(optim.Optimizer):
         super(Adam, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('amsgrad', False)
-            
+
     def step(self, closure=None):
         loss = None
         if closure is not None:
@@ -65,12 +65,12 @@ class AdamSpec(optim.Optimizer):
 
                 exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
                 beta1, beta2 = group['betas']
-            
+
                 state['step'] += 1
 
                 if group['weight_decay'] != 0:
                     grad = grad.add(group['weight_decay'], p.data)
-                    
+
                 # Decay the first and second moment running average coefficient
                 exp_avg.mul_(beta1).add_(1 - beta1, grad)
                 exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
@@ -97,20 +97,34 @@ def generator_lr(module, lr_sampler, memo=None):
         for k in range(w.size()[0]):
             lrw[k].fill_(lrb[k])
         yield lrw
-        
+
         if module.bias is not None:
             memo.add(module.bias)
             yield lrb
         return
-            
-            
+    elif isinstance(module, nn.RNN):
+        for name, p in module._parameters.items():
+            if name.find('weight') == 0:
+                memo.add(p)
+                lrb = lr_sampler(p, p.size()[:1])
+                lrw = p.new(p.size())
+                for k in range(p.size()[0]):
+                    lrw[k].fill_(lrb[k])
+                yield lrw
+
+                bias_name = 'bias' + name[6:]
+                if bias_name in module._parameters:
+                    memo.add(module._parameters[bias_name])
+                    yield lrb
+        return
+
     for _, p in module._parameters.items():
         if p is not None and p not in memo:
             print("WARNING:NOTIMPLEMENTED LAYER:{}".format(type(module)))
             memo.add(p)
             plr = lr_sampler(p, p.size())
             yield plr
-            
+
     for mname, module in module.named_children():
         for lr in generator_lr(module, lr_sampler, memo):
             yield lr
@@ -123,16 +137,16 @@ class SGDSpec(optim.Optimizer):
         defaults = dict(momentum=momentum, dampening=dampening,
                         weight_decay=weight_decay, nesterov=nesterov)
         super(SGDSpec, self).__init__(params, defaults)
-        
+
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
-            
+
 
     def __setstate__(self, state):
         super(SGD, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
-    
+
     def step(self, closure=None):
         loss = None
         if closure is not None:
@@ -143,7 +157,7 @@ class SGDSpec(optim.Optimizer):
             momentum = group['momentum']
             dampening = group['dampening']
             nesterov = group['nesterov']
-            
+
             for p, lr_p in zip(group['params'], group['lr_list']):
                 if p.grad is None:
                     continue
@@ -167,20 +181,20 @@ class SGDSpec(optim.Optimizer):
                         d_p = buf
 
                 p.data.addcmul_(-1., d_p, lr_p)
-                
 
-    
+
+
 class SGDSwitch:
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
                  classifiers_lr, momentum=0., weight_decay=0., TMP=True):
-        
+
         self.sgdmodel = SGDSpec(parameters_model, lr_model,
                                 momentum=momentum, weight_decay=weight_decay)
         self.classifiers_lr = classifiers_lr
         self.sgdclassifiers = \
             [optim.SGD(parameters, lr, momentum=momentum, weight_decay=weight_decay) \
              for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
-        
+
 
     def update_posterior(self, posterior):
         self.posterior = posterior
@@ -188,7 +202,7 @@ class SGDSwitch:
 
     def step(self):
         if self.sgdmodel is not None:
-            self.sgdmodel.step()    
+            self.sgdmodel.step()
         for sgdclassifier, posterior, lr in zip(self.sgdclassifiers,
                                                 self.posterior,
                                                 self.classifiers_lr):
@@ -205,5 +219,3 @@ class SGDSwitch:
             self.sgdmodel.zero_grad()
         for opt in self.sgdclassifiers:
             opt.zero_grad()
-
-    
