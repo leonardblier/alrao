@@ -109,8 +109,6 @@ def generator_lr(module, lr_sampler, memo=None):
         if reverse_embedding:
             lrb = lr_sampler(w.t(), w.size(1))
             lrw = w.new(w.size())
-            print(lrb.size())
-            print(lrw.size())
             for k in range(w.size(1)):
                 lrw[:,k].fill_(lrb[k])
         else:
@@ -120,12 +118,9 @@ def generator_lr(module, lr_sampler, memo=None):
                 lrw[k].fill_(lrb[k])
         yield lrw
     elif isinstance(module, nn.LSTM):
-        print('gen: RNN')
         dct_lr = {}
         for name, p in module._parameters.items():
-            print('gen: item: ' + name)
             if name.find('weight') == 0:
-                print('gen: found: ' + name)
                 memo.add(p)
                 lrb = lr_sampler(p, p.size()[:1])
                 lrw = p.new(p.size())
@@ -139,11 +134,8 @@ def generator_lr(module, lr_sampler, memo=None):
                 yield dct_lr[name]
         return
 
-    print('gen: current module: ' + repr(type(module)))
-
     for _, p in module._parameters.items():
         if p is not None and p not in memo:
-            print('gen: ' + _)
             print("WARNING:NOTIMPLEMENTED LAYER:{}".format(type(module)))
             memo.add(p)
             plr = lr_sampler(p, p.size())
