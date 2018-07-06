@@ -21,7 +21,7 @@ import numpy as np
 from models import *
 from mymodels import LinearClassifier
 from switch import Switch
-from optim_spec import SGDSwitch, SGDSpec, generator_lr
+from optim_spec import SGDSwitch, SGDSpec, generator_lr, AdamSpec, AdamSwitch
 from earlystopping import EarlyStopping
 
 from input import parseArgs
@@ -212,24 +212,24 @@ criterion = nn.NLLLoss()
 
 
 if args.use_switch:
-    #classifiers_lr = [base_lr for k in range(args.nb_class)]
-    classifier_minlr = minlr
-    classifier_maxlr = maxlr
-    classifiers_lr = [np.exp(np.log(classifier_minlr) + k * (np.log(classifier_maxlr) - np.log(classifier_minlr))/args.nb_class) \
-                      for k in range(args.nb_class)]
-
+    classifiers_lr = [np.exp(\
+        np.log(minlr) + k /(args.nb_class-1) * (np.log(maxlr) - np.log(minlr)) \
+                             ) for k in range(args.nb_class)]
     lr_model = generator_lr(net.model, lr_sampler)
+    if args.optimizer == 'SGD':
+        optimizer = SGDSwitch(net.parameters_model(),
+                              lr_model,
+                              net.classifiers_parameters_list(),
+                              classifiers_lr,
+                              momentum=args.momentum)
+    elif args.optimizer == 'Adam':
+        optimizer = AdamSwitch(net.parameters_model(),
+                               lr_model,
+                               net.classifiers_parameters_list(),
+                               classifiers_lr)
 
-    optimizer = SGDSwitch(net.parameters_model(),
-                          lr_model,
-                          net.classifiers_parameters_list(),
-                          classifiers_lr,
-                          momentum=args.momentum)
-                          #weight_decay=5e-4)
 else:
     if args.optimizer == 'SGD':
-        #optimizer = optim.SGD(net.parameters(), lr=base_lr, momentum=1.,
-        #                      weight_decay=5e-4)
         optimizer = optim.SGD(net.parameters(), lr=base_lr)
     elif args.optimizer == 'Adam':
         optimizer = optim.Adam(net.parameters(), lr=base_lr)
@@ -353,7 +353,7 @@ for epoch in range(args.epochs):
                              train_nll, train_acc, \
                              0, 0, \
                              test_nll, test_acc)
-    earlystopping.step(test_nll)
+    earlystopping.step(train_nll)
     if args.early_stopping and earlystopping.stop:
         print("End of Training because of early stopping at epoch {}".format(epoch))
         break

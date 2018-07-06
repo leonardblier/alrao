@@ -28,13 +28,6 @@ class AdamSpec(optim.Optimizer):
 
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
-            
-        # self.learning_rate = lr
-        # self.named_parameters = OrderedDict(named_parameters)
-        # self.named_lr = named_lr
-        # self.beta1, self.beta2 = betas
-        # self.state = defaultdict(dict)
-        # self.epsilon = eps
 
     def __setstate__(self, state):
         super(Adam, self).__setstate__(state)
@@ -47,10 +40,13 @@ class AdamSpec(optim.Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            for p, lr_p in zip(group["params"], group["lr_list"]):
+            for p, lr_p in zip(group['params'], group['lr_list']):
                 if p.grad is None:
                     continue
                 grad = p.grad.data
+                if grad.is_sparse:
+                    raise RuntimeError('Adam does not support sparse gradients, please consider SparseAdam instead')
+                amsgrad = group['amsgrad']
 
                 state = self.state[p]
 
@@ -61,28 +57,39 @@ class AdamSpec(optim.Optimizer):
                     state['exp_avg'] = torch.zeros_like(p.data)
                     # Exponential moving average of squared gradient values
                     state['exp_avg_sq'] = torch.zeros_like(p.data)
-
+                    if amsgrad:
+                        # Maintains max of all exp. moving avg. of sq. grad. values
+                        state['max_exp_avg_sq'] = torch.zeros_like(p.data)
 
                 exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
+                if amsgrad:
+                    max_exp_avg_sq = state['max_exp_avg_sq']
                 beta1, beta2 = group['betas']
-            
+
                 state['step'] += 1
 
                 if group['weight_decay'] != 0:
                     grad = grad.add(group['weight_decay'], p.data)
-                    
+
                 # Decay the first and second moment running average coefficient
                 exp_avg.mul_(beta1).add_(1 - beta1, grad)
                 exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
-
-                denom = exp_avg_sq.sqrt().add_(group['eps'])
+                if amsgrad:
+                    # Maintains the maximum of all 2nd moment running avg. till now
+                    torch.max(max_exp_avg_sq, exp_avg_sq, out=max_exp_avg_sq)
+                    # Use the max. for normalizing running avg. of gradient
+                    denom = max_exp_avg_sq.sqrt().add_(group['eps'])
+                else:
+                    denom = exp_avg_sq.sqrt().add_(group['eps'])
 
                 bias_correction1 = 1 - beta1 ** state['step']
                 bias_correction2 = 1 - beta2 ** state['step']
-
                 step_size = math.sqrt(bias_correction2) / bias_correction1
-                p.data.addcdiv_(-step_size, exp_avg * lr_p, denom)
 
+                p.data.addcmul(-step_size, lr_p,   torch.div(exp_avg, denom))
+        return loss
+    
+        
 
 
 def generator_lr(module, lr_sampler, memo=None):
@@ -119,7 +126,6 @@ def generator_lr(module, lr_sampler, memo=None):
 class SGDSpec(optim.Optimizer):
     def __init__(self, params, lr_params, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False):
-        # TODO : Remove all the names
         defaults = dict(momentum=momentum, dampening=dampening,
                         weight_decay=weight_decay, nesterov=nesterov)
         super(SGDSpec, self).__init__(params, defaults)
@@ -172,7 +178,7 @@ class SGDSpec(optim.Optimizer):
     
 class SGDSwitch:
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
-                 classifiers_lr, momentum=0., weight_decay=0., TMP=True):
+                 classifiers_lr, momentum=0., weight_decay=0.):
         
         self.sgdmodel = SGDSpec(parameters_model, lr_model,
                                 momentum=momentum, weight_decay=weight_decay)
@@ -206,4 +212,40 @@ class SGDSwitch:
         for opt in self.sgdclassifiers:
             opt.zero_grad()
 
+class AdamSwitch:
+    def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
+                 classifiers_lr, **kwargs):
+
+        self.classifiers_lr = classifiers_lr
+        
+        self.adammodel = AdamSpec(parameters_model, lr_model, **kwargs)
+        self.adamclassifiers = [optim.Adam(parameters, lr, **kwargs) \
+             for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
+        
+
+    def update_posterior(self, posterior):
+        self.posterior = posterior
+
+
+    def step(self):
+        if self.adammodel is not None:
+            self.adammodel.step()    
+        for adamclassifier, posterior, lr in zip(self.adamclassifiers,
+                                                self.posterior,
+                                                self.classifiers_lr):
+            for param_group in adamclassifier.param_groups:
+                #param_group['lr'] = lr / posterior
+                adamclassifier.step()
+
+    def classifiers_zero_grad(self):
+        for opt in self.adamclassifiers:
+            opt.zero_grad()
+
+    def zero_grad(self):
+        if self.adammodel is not None:
+            self.adammodel.zero_grad()
+        for opt in self.adamclassifiers:
+            opt.zero_grad()
     
+
+            
