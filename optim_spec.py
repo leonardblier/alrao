@@ -86,7 +86,8 @@ class AdamSpec(optim.Optimizer):
                 bias_correction2 = 1 - beta2 ** state['step']
                 step_size = math.sqrt(bias_correction2) / bias_correction1
 
-                p.data.addcmul(-step_size, lr_p,   torch.div(exp_avg, denom))
+                #p.data.addcmul(-step_size, lr_p,   torch.div(exp_avg, denom))
+                p.data.addcdiv(-step_size, torch.mul(lr_p, exp_avg), denom)
         return loss
     
         
@@ -175,77 +176,63 @@ class SGDSpec(optim.Optimizer):
                 p.data.addcmul_(-1., d_p, lr_p)
                 
 
+class OptSwitch:
+    def __init__(self):
+        pass
+
+    def update_posterior(self, posterior):
+        self.posterior = posterior
+
+    def step(self):
+        if self.optmodel is not None:
+            self.optmodel.step()
+        for optclassifier in self.optclassifiers:
+            optclassifier.step()
+        # for sgdclassifier, posterior, lr in zip(self.sgdclassifiers,
+        #                                         self.posterior,
+        #                                         self.classifiers_lr):
+        #     for param_group in sgdclassifier.param_groups:
+        #         #param_group['lr'] = lr / posterior
+        #         sgdclassifier.step()
+
+    def classifiers_zero_grad(self):
+        for opt in self.optclassifiers:
+            opt.zero_grad()
+
+    def zero_grad(self):
+        if self.optmodel is not None:
+            self.optmodel.zero_grad()
+        for opt in self.optclassifiers:
+            opt.zero_grad()
     
-class SGDSwitch:
+    
+class SGDSwitch(OptSwitch):
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
                  classifiers_lr, momentum=0., weight_decay=0.):
-        
-        self.sgdmodel = SGDSpec(parameters_model, lr_model,
+
+        super(SGDSwitch, self).__init__()
+        self.optmodel = SGDSpec(parameters_model, lr_model,
                                 momentum=momentum, weight_decay=weight_decay)
         self.classifiers_lr = classifiers_lr
-        self.sgdclassifiers = \
+        self.optclassifiers = \
             [optim.SGD(parameters, lr, momentum=momentum, weight_decay=weight_decay) \
              for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
         
 
-    def update_posterior(self, posterior):
-        self.posterior = posterior
+    
 
-
-    def step(self):
-        if self.sgdmodel is not None:
-            self.sgdmodel.step()    
-        for sgdclassifier, posterior, lr in zip(self.sgdclassifiers,
-                                                self.posterior,
-                                                self.classifiers_lr):
-            for param_group in sgdclassifier.param_groups:
-                #param_group['lr'] = lr / posterior
-                sgdclassifier.step()
-
-    def classifiers_zero_grad(self):
-        for opt in self.sgdclassifiers:
-            opt.zero_grad()
-
-    def zero_grad(self):
-        if self.sgdmodel is not None:
-            self.sgdmodel.zero_grad()
-        for opt in self.sgdclassifiers:
-            opt.zero_grad()
-
-class AdamSwitch:
+class AdamSwitch(OptSwitch):
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
                  classifiers_lr, **kwargs):
 
-        self.classifiers_lr = classifiers_lr
+        super(AdamSwitch, self).__init__()
+        #self.classifiers_lr = classifiers_lr
         
-        self.adammodel = AdamSpec(parameters_model, lr_model, **kwargs)
-        self.adamclassifiers = [optim.Adam(parameters, lr, **kwargs) \
+        self.optmodel = AdamSpec(parameters_model, lr_model, **kwargs)
+        self.optclassifiers = [optim.Adam(parameters, lr, **kwargs) \
              for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
         
 
-    def update_posterior(self, posterior):
-        self.posterior = posterior
-
-
-    def step(self):
-        if self.adammodel is not None:
-            self.adammodel.step()    
-        for adamclassifier, posterior, lr in zip(self.adamclassifiers,
-                                                self.posterior,
-                                                self.classifiers_lr):
-            for param_group in adamclassifier.param_groups:
-                #param_group['lr'] = lr / posterior
-                adamclassifier.step()
-
-    def classifiers_zero_grad(self):
-        for opt in self.adamclassifiers:
-            opt.zero_grad()
-
-    def zero_grad(self):
-        if self.adammodel is not None:
-            self.adammodel.zero_grad()
-        for opt in self.adamclassifiers:
-            opt.zero_grad()
-    
+   
 
             
