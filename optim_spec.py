@@ -120,6 +120,7 @@ def generator_lr(module, lr_sampler, memo=None):
     elif isinstance(module, nn.LSTM):
         dct_lr = {}
         for name, p in module._parameters.items():
+            print(name)
             if name.find('weight') == 0:
                 memo.add(p)
                 lrb = lr_sampler(p, p.size()[:1])
