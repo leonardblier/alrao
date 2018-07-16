@@ -85,7 +85,7 @@ class AdamSpec(optim.Optimizer):
 
 
 
-def generator_lr(module, lr_sampler, memo=None):
+def generator_lr(module, lr_sampler, memo = None, reverse_embedding = True, same_lr = True):
     if memo is None:
         memo = set()
 
@@ -105,7 +105,6 @@ def generator_lr(module, lr_sampler, memo=None):
     elif isinstance(module, nn.Embedding):
         memo.add(module.weight)
         w = module.weight
-        reverse_embedding = True
         if reverse_embedding:
             lrb = lr_sampler(w.t(), w.size(1))
             lrw = w.new(w.size())
@@ -120,30 +119,45 @@ def generator_lr(module, lr_sampler, memo=None):
     elif isinstance(module, nn.LSTM):
         dct_lr = {}
         for name, p in module._parameters.items():
-            print(name)
-            if name.find('weight') == 0:
+            if name.find('weight_ih') == 0:
                 memo.add(p)
-                lrb = lr_sampler(p, p.size()[:1])
-                lrw = p.new(p.size())
+                lrb_ih = lr_sampler(p, p.size()[:1])
+                lrw_ih = p.new(p.size())
                 for k in range(p.size()[0]):
-                    lrw[k].fill_(lrb[k])
-                yield lrw
+                    lrw_ih[k].fill_(lrb_ih[k])
 
-                dct_lr['bias' + name[6:]] = lrb
-            elif name.find('bias') == 0:
+                if same_lr:
+                    lrw_hh = lrw_ih
+                    lrb_hh = lrb_ih
+
+                yield lrw_ih
+            elif name.find('weight_hh') == 0:
                 memo.add(p)
-                yield dct_lr[name]
+                if not same_lr:
+                    lrb_hh = lr_sampler(p, p.size()[:1])
+                    lrw_hh = p.new(p.size())
+                    for k in range(p.size()[0]):
+                        lrw_hh[k].fill_(lrb_hh[k])
+                yield lrw_hh
+            elif name.find('bias_ih') == 0:
+                memo.add(p)
+                yield lrb_ih
+            elif name.find('bias_hh') == 0:
+                memo.add(p)
+                yield lrb_hh
+            else:
+                print("switch module: optim_spec.py: WARNING: UNKNOWN PARAMETER IN LSTM MODULE: {}".format(name))
         return
 
     for _, p in module._parameters.items():
         if p is not None and p not in memo:
-            print("WARNING:NOTIMPLEMENTED LAYER:{}".format(type(module)))
+            print("switch module: optim_spec.py: WARNING: NOT IMPLEMENTED LAYER: {}".format(type(module)))
             memo.add(p)
             plr = lr_sampler(p, p.size())
             yield plr
 
     for mname, module in module.named_children():
-        for lr in generator_lr(module, lr_sampler, memo):
+        for lr in generator_lr(module, lr_sampler, memo, reverse_embedding, same_lr):
             yield lr
 
 
