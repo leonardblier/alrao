@@ -120,6 +120,7 @@ def generator_lr(module, lr_sampler, memo = None, reverse_embedding = True, same
         dct_lr = {}
         for name, p in module._parameters.items():
             if name.find('weight_ih') == 0:
+                print('weight_ih')
                 memo.add(p)
                 lrb_ih = lr_sampler(p, p.size()[:1])
                 lrw_ih = p.new(p.size())
@@ -130,20 +131,27 @@ def generator_lr(module, lr_sampler, memo = None, reverse_embedding = True, same
                     lrw_hh = lrw_ih
                     lrb_hh = lrb_ih
 
+                print(lrw_ih.size())
                 yield lrw_ih
             elif name.find('weight_hh') == 0:
+                print('weight_hh')
                 memo.add(p)
                 if not same_lr:
                     lrb_hh = lr_sampler(p, p.size()[:1])
                     lrw_hh = p.new(p.size())
                     for k in range(p.size()[0]):
                         lrw_hh[k].fill_(lrb_hh[k])
+                print(lrw_hh.size())
                 yield lrw_hh
             elif name.find('bias_ih') == 0:
+                print('bias_ih')
+                print(lrb_ih.size())
                 memo.add(p)
                 yield lrb_ih
             elif name.find('bias_hh') == 0:
+                print('bias_hh')
                 memo.add(p)
+                print(lrb_hh.size())
                 yield lrb_hh
             else:
                 print("switch module: optim_spec.py: WARNING: UNKNOWN PARAMETER IN LSTM MODULE: {}".format(name))

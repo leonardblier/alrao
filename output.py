@@ -54,6 +54,9 @@ def genNameBase(args):
         nameBase += 'p' if args.maxLR >= 0 else 'm'
         nameBase += repr(abs(args.maxLR))
 
+    if args.use_switch and args.same_lr:
+        nameBase += '_sLR'
+
     if args.momentum != 0.:
         nameBase += '_mom' + repr(args.momentum)
         
