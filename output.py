@@ -54,15 +54,15 @@ def genNameBase(args):
         nameBase += 'p' if args.maxLR >= 0 else 'm'
         nameBase += repr(abs(args.maxLR))
 
-    if args.use_switch and args.same_lr:
-        nameBase += '_sLR'
-
     if args.momentum != 0.:
         nameBase += '_mom' + repr(args.momentum)
-        
+
     if args.use_switch and args.nb_class != 0:
         nameBase += '_sw-'
         nameBase += repr(args.nb_class)
+
+    if args.use_switch and args.same_lr:
+        nameBase += '_sLR'
 
     nameBase += '_' + args.optimizer
     nameBase += '_K' + repr(args.size_multiplier)
