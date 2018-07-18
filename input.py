@@ -5,7 +5,7 @@ from collections import defaultdict
 
 def parseArgs(parser = None):
     if parser is None:
-        parser = argparse.ArgumentParser(description='weight-decay')
+        parser = argparse.ArgumentParser(description='switch')
 
     # CUDA
     parser.add_argument('--no-cuda', action = 'store_true', default = False, \

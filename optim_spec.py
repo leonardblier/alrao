@@ -85,7 +85,7 @@ class AdamSpec(optim.Optimizer):
 
 
 
-def generator_lr(module, lr_sampler, memo = None, reverse_embedding = True, same_lr = True):
+def generator_lr(module, lr_sampler, memo = None, reverse_embedding = True, same_lr = 1):
     if memo is None:
         memo = set()
 
@@ -93,9 +93,12 @@ def generator_lr(module, lr_sampler, memo = None, reverse_embedding = True, same
         memo.add(module.weight)
         w = module.weight
         lrb = lr_sampler(w, w.size()[:1])
-        lrw = w.new(w.size())
-        for k in range(w.size()[0]):
-            lrw[k].fill_(lrb[k])
+        if same_lr == 0:
+            lrw = lr_sampler(w, w.size())
+        else:
+            lrw = w.new(w.size())
+            for k in range(w.size(0)):
+                lrw[k].fill_(lrb[k])
         yield lrw
 
         if module.bias is not None:
@@ -105,53 +108,67 @@ def generator_lr(module, lr_sampler, memo = None, reverse_embedding = True, same
     elif isinstance(module, nn.Embedding):
         memo.add(module.weight)
         w = module.weight
-        if reverse_embedding:
-            lrb = lr_sampler(w.t(), w.size(1))
-            lrw = w.new(w.size())
-            for k in range(w.size(1)):
-                lrw[:,k].fill_(lrb[k])
+
+        if same_lr == 0:
+            lrw = lr_sampler(w, w.size())
         else:
-            lrb = lr_sampler(w, w.size(0))
+            sz = w.size(0)
+            if reverse_embedding: w = w.t()
+
+            lrb = lr_sampler(w, sz)
             lrw = w.new(w.size())
-            for k in range(w.size(1)):
+            for k in range(w.size(0)):
                 lrw[k].fill_(lrb[k])
+
+            if reverse_embedding: lrw = lrw.t()
+
+            """
+            if reverse_embedding:
+                lrb = lr_sampler(w.t(), w.size(1))
+                lrw = w.new(w.size())
+                for k in range(w.size(1)):
+                    lrw[:,k].fill_(lrb[k])
+            else:
+                lrb = lr_sampler(w, w.size(0))
+                lrw = w.new(w.size())
+                for k in range(w.size(1)):
+                    lrw[k].fill_(lrb[k])
+            """
         yield lrw
     elif isinstance(module, nn.LSTM):
         dct_lr = {}
         for name, p in module._parameters.items():
             if name.find('weight_ih') == 0:
-                print('weight_ih')
                 memo.add(p)
                 lrb_ih = lr_sampler(p, p.size()[:1])
-                lrw_ih = p.new(p.size())
-                for k in range(p.size()[0]):
-                    lrw_ih[k].fill_(lrb_ih[k])
+                if same_lr == 0:
+                    lrw_ih = lr_sampler(p, p.size())
+                else:
+                    lrw_ih = p.new(p.size())
+                    for k in range(p.size(0)):
+                        lrw_ih[k].fill_(lrb_ih[k])
 
-                if same_lr:
-                    lrw_hh = lrw_ih
-                    lrb_hh = lrb_ih
+                    if same_lr == 2:
+                        lrw_hh = lrw_ih
+                        lrb_hh = lrb_ih
 
-                print(lrw_ih.size())
                 yield lrw_ih
             elif name.find('weight_hh') == 0:
-                print('weight_hh')
                 memo.add(p)
-                if not same_lr:
+                if same_lr == 0:
+                    lrb_hh = lr_sampler(p, p.size()[:1])
+                    lrw_hh = lr_sampler(p, p.size())
+                elif same_lr == 1:
                     lrb_hh = lr_sampler(p, p.size()[:1])
                     lrw_hh = p.new(p.size())
                     for k in range(p.size()[0]):
                         lrw_hh[k].fill_(lrb_hh[k])
-                print(lrw_hh.size())
                 yield lrw_hh
             elif name.find('bias_ih') == 0:
-                print('bias_ih')
-                print(lrb_ih.size())
                 memo.add(p)
                 yield lrb_ih
             elif name.find('bias_hh') == 0:
-                print('bias_hh')
                 memo.add(p)
-                print(lrb_hh.size())
                 yield lrb_hh
             else:
                 print("switch module: optim_spec.py: WARNING: UNKNOWN PARAMETER IN LSTM MODULE: {}".format(name))

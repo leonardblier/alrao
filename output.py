@@ -61,8 +61,11 @@ def genNameBase(args):
         nameBase += '_sw-'
         nameBase += repr(args.nb_class)
 
-    if args.use_switch and args.same_lr:
-        nameBase += '_sLR'
+    if args.use_switch:
+        if args.same_lr == 1:
+            nameBase += '_sLR'
+        elif args.same_lr == 2:
+            nameBase += '_SLR'
 
     nameBase += '_' + args.optimizer
     nameBase += '_K' + repr(args.size_multiplier)
