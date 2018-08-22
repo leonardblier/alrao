@@ -106,8 +106,8 @@ class BigModel(nn.Module):
         self.nclassifiers = nclassifiers
 
         for i in range(nclassifiers):
-            classifier = classifier(self.model.linearinputdim, nclasses)
-            setattr(self, "classifier"+str(i), classifier)
+            U_classifier = classifier(self.model.linearinputdim, nclasses)
+            setattr(self, "classifier"+str(i), U_classifier)
 
     def forward(self, x):
         x = self.model(x)
