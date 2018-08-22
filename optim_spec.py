@@ -17,23 +17,33 @@ These optimizers are copies of the original pytorch optimizers with one change:
     this layer, then uses it to update the layer.
 """
 
-                 
+
 class AdamSpec(optim.Optimizer):
     def __init__(self, params, lr_params, betas = (.9, .999), eps = 1e-8,
                  weight_decay=0, amsgrad=False):
-        
+
         defaults = dict(betas=betas, eps=eps, weight_decay=weight_decay,
                         amsgrad=amsgrad)
         super(AdamSpec, self).__init__(params, defaults)
 
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
+<<<<<<< HEAD
+=======
+
+        # self.learning_rate = lr
+        # self.named_parameters = OrderedDict(named_parameters)
+        # self.named_lr = named_lr
+        # self.beta1, self.beta2 = betas
+        # self.state = defaultdict(dict)
+        # self.epsilon = eps
+>>>>>>> Generalize_RNN
 
     def __setstate__(self, state):
         super(Adam, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('amsgrad', False)
-            
+
     def step(self, closure=None):
         loss = None
         if closure is not None:
@@ -89,11 +99,24 @@ class AdamSpec(optim.Optimizer):
                 #p.data.addcmul(-step_size, lr_p,   torch.div(exp_avg, denom))
                 p.data.addcdiv(-step_size, torch.mul(lr_p, exp_avg), denom)
         return loss
-    
-        
 
 
-def generator_lr(module, lr_sampler, memo=None):
+
+
+r"""
+Arguments:
+    module: generator_lr generates the learning rates for 'module'
+    lr_sampler: function used to generate random tensors of lr
+    memo: set of the tensors of learning rates
+    same_lr: can take the following values:
+        same_lr = 0: one lr per weight
+        same_lr = 1: one lr per neuron (i.e. row of tensor)
+        same_lr = 2: for RNN: one lr for each input-to-hidden tensor and one lr
+            for each hidden-to-hidden tensor
+    reverse_embedding: for RNN, for the class nn.Embedding if same_lr != 0:
+       if True, one lr per column of the weight tensor of nn.Embedding
+"""
+def generator_lr(module, lr_sampler, memo = None, same_lr = 1, reverse_embedding = True):
     if memo is None:
         memo = set()
 
@@ -101,26 +124,96 @@ def generator_lr(module, lr_sampler, memo=None):
         memo.add(module.weight)
         w = module.weight
         lrb = lr_sampler(w, w.size()[:1])
-        lrw = w.new(w.size())
-        for k in range(w.size()[0]):
-            lrw[k].fill_(lrb[k])
+        if same_lr == 0:
+            lrw = lr_sampler(w, w.size())
+        else:
+            lrw = w.new(w.size())
+            for k in range(w.size(0)):
+                lrw[k].fill_(lrb[k])
         yield lrw
-        
+
         if module.bias is not None:
             memo.add(module.bias)
             yield lrb
         return
-            
-            
+    elif isinstance(module, nn.Embedding):
+        memo.add(module.weight)
+        w = module.weight
+
+        if same_lr == 0:
+            lrw = lr_sampler(w, w.size())
+        else:
+            sz = w.size(0)
+            if reverse_embedding: w = w.t()
+
+            lrb = lr_sampler(w, sz)
+            lrw = w.new(w.size())
+            for k in range(w.size(0)):
+                lrw[k].fill_(lrb[k])
+
+            if reverse_embedding: lrw = lrw.t()
+
+            """
+            if reverse_embedding:
+                lrb = lr_sampler(w.t(), w.size(1))
+                lrw = w.new(w.size())
+                for k in range(w.size(1)):
+                    lrw[:,k].fill_(lrb[k])
+            else:
+                lrb = lr_sampler(w, w.size(0))
+                lrw = w.new(w.size())
+                for k in range(w.size(1)):
+                    lrw[k].fill_(lrb[k])
+            """
+        yield lrw
+    elif isinstance(module, nn.LSTM):
+        dct_lr = {}
+        for name, p in module._parameters.items():
+            if name.find('weight_ih') == 0:
+                memo.add(p)
+                lrb_ih = lr_sampler(p, p.size()[:1])
+                if same_lr == 0:
+                    lrw_ih = lr_sampler(p, p.size())
+                else:
+                    lrw_ih = p.new(p.size())
+                    for k in range(p.size(0)):
+                        lrw_ih[k].fill_(lrb_ih[k])
+
+                    if same_lr == 2:
+                        lrw_hh = lrw_ih
+                        lrb_hh = lrb_ih
+
+                yield lrw_ih
+            elif name.find('weight_hh') == 0:
+                memo.add(p)
+                if same_lr == 0:
+                    lrb_hh = lr_sampler(p, p.size()[:1])
+                    lrw_hh = lr_sampler(p, p.size())
+                elif same_lr == 1:
+                    lrb_hh = lr_sampler(p, p.size()[:1])
+                    lrw_hh = p.new(p.size())
+                    for k in range(p.size()[0]):
+                        lrw_hh[k].fill_(lrb_hh[k])
+                yield lrw_hh
+            elif name.find('bias_ih') == 0:
+                memo.add(p)
+                yield lrb_ih
+            elif name.find('bias_hh') == 0:
+                memo.add(p)
+                yield lrb_hh
+            else:
+                print("switch module: optim_spec.py: WARNING: UNKNOWN PARAMETER IN LSTM MODULE: {}".format(name))
+        return
+
     for _, p in module._parameters.items():
         if p is not None and p not in memo:
-            print("WARNING:NOTIMPLEMENTED LAYER:{}".format(type(module)))
+            print("switch module: optim_spec.py: WARNING: NOT IMPLEMENTED LAYER: {}".format(type(module)))
             memo.add(p)
             plr = lr_sampler(p, p.size())
             yield plr
-            
+
     for mname, module in module.named_children():
-        for lr in generator_lr(module, lr_sampler, memo):
+        for lr in generator_lr(module, lr_sampler, memo, reverse_embedding, same_lr):
             yield lr
 
 
@@ -130,16 +223,16 @@ class SGDSpec(optim.Optimizer):
         defaults = dict(momentum=momentum, dampening=dampening,
                         weight_decay=weight_decay, nesterov=nesterov)
         super(SGDSpec, self).__init__(params, defaults)
-        
+
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
-            
+
 
     def __setstate__(self, state):
         super(SGD, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
-    
+
     def step(self, closure=None):
         loss = None
         if closure is not None:
@@ -150,7 +243,7 @@ class SGDSpec(optim.Optimizer):
             momentum = group['momentum']
             dampening = group['dampening']
             nesterov = group['nesterov']
-            
+
             for p, lr_p in zip(group['params'], group['lr_list']):
                 if p.grad is None:
                     continue
@@ -174,7 +267,6 @@ class SGDSpec(optim.Optimizer):
                         d_p = buf
 
                 p.data.addcmul_(-1., d_p, lr_p)
-                
 
 class OptSwitch:
     def __init__(self):
@@ -204,8 +296,8 @@ class OptSwitch:
             self.optmodel.zero_grad()
         for opt in self.optclassifiers:
             opt.zero_grad()
-    
-    
+
+
 class SGDSwitch(OptSwitch):
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
                  classifiers_lr, momentum=0., weight_decay=0.):
@@ -217,9 +309,7 @@ class SGDSwitch(OptSwitch):
         self.optclassifiers = \
             [optim.SGD(parameters, lr, momentum=momentum, weight_decay=weight_decay) \
              for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
-        
 
-    
 
 class AdamSwitch(OptSwitch):
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
@@ -227,12 +317,7 @@ class AdamSwitch(OptSwitch):
 
         super(AdamSwitch, self).__init__()
         #self.classifiers_lr = classifiers_lr
-        
+
         self.optmodel = AdamSpec(parameters_model, lr_model, **kwargs)
         self.optclassifiers = [optim.Adam(parameters, lr, **kwargs) \
              for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
-        
-
-   
-
-            
