@@ -28,8 +28,6 @@ class AdamSpec(optim.Optimizer):
 
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
-<<<<<<< HEAD
-=======
 
         # self.learning_rate = lr
         # self.named_parameters = OrderedDict(named_parameters)
@@ -37,7 +35,6 @@ class AdamSpec(optim.Optimizer):
         # self.beta1, self.beta2 = betas
         # self.state = defaultdict(dict)
         # self.epsilon = eps
->>>>>>> Generalize_RNN
 
     def __setstate__(self, state):
         super(Adam, self).__setstate__(state)
