@@ -85,7 +85,20 @@ class AdamSpec(optim.Optimizer):
 
 
 
-def generator_lr(module, lr_sampler, memo = None, reverse_embedding = True, same_lr = 1):
+r"""
+Arguments:
+    module: generator_lr generates the learning rates for 'module'
+    lr_sampler: function used to generate random tensors of lr
+    memo: set of the tensors of learning rates
+    same_lr: can take the following values:
+        same_lr = 0: one lr per weight
+        same_lr = 1: one lr per neuron (i.e. row of tensor)
+        same_lr = 2: for RNN: one lr for each input-to-hidden tensor and one lr
+            for each hidden-to-hidden tensor
+    reverse_embedding: for RNN, for the class nn.Embedding if same_lr != 0:
+       if True, one lr per column of the weight tensor of nn.Embedding 
+"""
+def generator_lr(module, lr_sampler, memo = None, same_lr = 1, reverse_embedding = True):
     if memo is None:
         memo = set()
 
