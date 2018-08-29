@@ -99,6 +99,20 @@ class AdamSpec(optim.Optimizer):
 
 
 
+def lr_sampler_generic(minlr, maxlr):
+    def f(tensor, size):
+        """
+        Takes a torch tensor as input and sample a tensor with same size for
+        learning rates
+        """
+
+        lr = tensor.new(size).uniform_()
+        lr = (lr * (np.log(maxlr) - np.log(minlr)) + np.log(minlr)).exp()
+        #lr.fill_(base_lr)
+        return lr
+
+    return f
+
 
 r"""
 Arguments:

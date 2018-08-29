@@ -121,7 +121,7 @@ def lr_sampler(tensor, size):
 
 if args.use_switch:
     model = build_model(args.model_name, gamma=args.size_multiplier)
-    net = AlraoModel(model, model.linearinputdim, args.nb_class, 10, LinearClassifier)
+    net = AlraoModel(model, args.nb_class, LinearClassifier, model.linearinputdim, 10)
     total_param = sum(np.prod(p.size()) for p in net.parameters_model())
     total_param += sum(np.prod(p.size()) \
                        for lcparams in net.classifiers_parameters_list() \

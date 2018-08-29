@@ -1,3 +1,6 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
 from switch import Switch
 
 
@@ -9,7 +12,7 @@ class AlraoModel(nn.Module):
         nclasses: number of classes
         classifier: python class to use to construct the classifiers
     """
-    def __init__(self, model, linearinputdim, nclassifiers, nclasses, classifier):
+    def __init__(self, model, nclassifiers, classifier, *args, **kwargs):
         super(AlraoModel, self).__init__()
         self.switch = Switch(nclassifiers, save_cl_perf=True)
         #self.model = VGGNet(args.size_multiplier)
@@ -17,7 +20,7 @@ class AlraoModel(nn.Module):
         self.nclassifiers = nclassifiers
 
         for i in range(nclassifiers):
-            U_classifier = classifier(linearinputdim, nclasses)
+            U_classifier = classifier(*args, **kwargs)
             setattr(self, "classifier" + str(i), U_classifier)
 
     def reset_parameters():
