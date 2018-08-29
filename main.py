@@ -23,6 +23,7 @@ from mymodels import LinearClassifier
 from switch import Switch
 from optim_spec import SGDSwitch, SGDSpec, generator_lr
 from earlystopping import EarlyStopping
+from alrao_model import AlraoModel
 
 from input import parseArgs
 from output import OutputManager
@@ -90,87 +91,6 @@ def build_model(model_name, *args, **kwargs):
     else:
         raise ValueError("Unknown model name : {}".format(model_name))
 
-class BigModel(nn.Module):
-    r"""
-    Arguments:
-        model: model to train, given without its last layer
-        nclassifiers: number of classifiers
-        nclasses: number of classes
-        classifier: python class to use to construct the classifiers
-    """
-    def __init__(self, model, nclassifiers, nclasses, classifier):
-        super(BigModel, self).__init__()
-        self.switch = Switch(nclassifiers, save_cl_perf=True)
-        #self.model = VGGNet(args.size_multiplier)
-        self.model = model #
-        self.nclassifiers = nclassifiers
-
-        for i in range(nclassifiers):
-            U_classifier = classifier(self.model.linearinputdim, nclasses)
-            setattr(self, "classifier"+str(i), U_classifier)
-
-    def forward(self, x):
-        x = self.model(x)
-        lst_logpx = [cl(x) for cl in self.classifiers()]
-        self.last_x, self.last_lst_logpx = x, lst_logpx
-        return self.switch.forward(lst_logpx)
-
-    def update_switch(self, y, x=None, catch_up=True):
-        if x is None:
-            lst_px = self.last_lst_logpx
-        else:
-            lst_px = [cl(x) for cl in self.classifiers()]
-        self.switch.Supdate(lst_px, y)
-
-        if catch_up:
-            self.hard_catch_up()
-
-    def hard_catch_up(self, threshold=-20):
-        logpost = self.switch.logposterior
-        weak_cl = [cl for cl, lp in zip(self.classifiers(), logpost) if lp < threshold]
-        if len(weak_cl) == 0:
-            return None
-
-        mean_weight = torch.stack(
-            [cl.fc.weight * p for (cl, p) in zip(self.classifiers(), logpost.exp())],
-            dim=-1).sum(dim=-1).detach()
-        mean_bias = torch.stack(
-            [cl.fc.bias * p for (cl, p) in zip(self.classifiers(), logpost.exp())],
-            dim=-1).sum(dim=-1).detach()
-        for cl in weak_cl:
-            cl.fc.weight.data = mean_weight.clone()
-            cl.fc.bias.data = mean_bias.clone()
-
-    def parameters_model(self):
-        return self.model.parameters()
-
-    def classifiers(self):
-        for i in range(self.nclassifiers):
-            yield getattr(self, "classifier"+str(i))
-
-    def classifiers_parameters_list(self):
-        return [cl.parameters() for cl in self.classifiers()]
-
-    def posterior(self):
-        return self.switch.logposterior.exp()
-
-    def classifiers_predictions(self, x=None):
-        if x is None:
-            return self.last_lst_logpx
-        x = self.model(x)
-        lst_px = [cl(x) for cl in self.classifiers()]
-        self.last_lst_logpx = lst_px
-        return lst_px
-
-    def repr_posterior(self):
-        post = self.posterior()
-        bars = u' ▁▂▃▄▅▆▇█'
-        res = "|"+"".join(bars[int(px)] for px in post/post.max() * 8) + "|"
-        return res
-
-
-
-
 
 class StandardModel(nn.Module):
     def __init__(self, K=1):
@@ -201,7 +121,7 @@ def lr_sampler(tensor, size):
 
 if args.use_switch:
     model = build_model(args.model_name, gamma=args.size_multiplier)
-    net = BigModel(model, args.nb_class, 10, LinearClassifier)
+    net = AlraoModel(model, model.linearinputdim, args.nb_class, 10, LinearClassifier)
     total_param = sum(np.prod(p.size()) for p in net.parameters_model())
     total_param += sum(np.prod(p.size()) \
                        for lcparams in net.classifiers_parameters_list() \
