@@ -5,7 +5,7 @@ from sbatch import launch_exp
 nb_expes = 1 # number of experiments per set of parameters
 
 runOpt = {'env_name': 'test', # name of the environment to be activated
-          'use_slurm': True, # if True, read the slurm options
+          'use_slurm': False, # if True, read the slurm options
           'interactive': False, # must be True if you run an interactive job
                                # if use_slurm is True and interactive is False,
                                #     run the script with sbatch
@@ -26,7 +26,7 @@ Notes:
 """
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 10000,
+argsDict = {'epochs': 1,
             'early_stopping': True,
 #            'size_multiplier': 3,
             'model_name':'GoogLeNet',
@@ -64,6 +64,9 @@ sbatchOpt = ['--job-name=mixed_lr',
 #lr_list = [1e-6, 1e-5, 1e-4, 0.1, 0.5, 1., 10.]
 #lr_list_orig = [.025, .05, .01, .005, .001]
 
+launch_exp(runOpt, sbatchOpt, argsDict)
+
+"""
 lr_list = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1., 10.]
 argsDict['size_multiplier'] = 1
 argsDict['model_name'] = 'GoogLeNet'
@@ -73,8 +76,10 @@ for i in range(1):
     for lr in lr_list:
         argsDict['lr'] = lr
         launch_exp(runOpt, sbatchOpt, argsDict)
+"""
 
             
+"""
 minmaxlr = [(mini, maxi) for mini in range(-6,2) for maxi in range(mini,2)]
 #minmaxlr = [(-6, maxi) for maxi in range(-6, 2)] + [(mini, 1) for mini in range(-5,2)]
 # minmaxlr = [(mini, mini) for mini in range(-7,3)]
@@ -88,7 +93,7 @@ for i in range(1):
         argsDict['minLR'] = minLR
         argsDict['maxLR'] = maxLR
         launch_exp(runOpt, sbatchOpt, argsDict)
-
+"""
             
     
 
