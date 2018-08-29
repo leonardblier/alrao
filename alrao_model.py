@@ -23,7 +23,37 @@ class AlraoModel(nn.Module):
             U_classifier = classifier(*args, **kwargs)
             setattr(self, "classifier" + str(i), U_classifier)
 
-    def reset_parameters():
+    def method_fwd_model(self, method_name_src, method_name_dst = None):
+        if method_name_dst is None:
+            method_name_dst = method_name_src
+        assert getattr(self, method_name_dst, None) is None, 'The method "' + method_name_dst + '" cannot be forwarded: an attribute with the same name already exists.'
+        method = getattr(self.model, method_name_src)
+        def f(*args, **kwargs):
+            return method(*args, **kwargs)
+        f.__doc__ = method.__doc__
+        f.__name__ = method_name_dst
+        setattr(self, f.__name__, f)
+
+    def method_fwd_classifiers(self, method_name_src, method_name_dst = None):
+        if method_name_dst is None:
+            method_name_dst = method_name_src
+        assert getattr(self, method_name_src, None) is None, 'The method "' + method_name_dst + '" cannot be forwarded: an attribute with the same name already exists.'
+        lst_methods = []
+        for i in range(self.nclassifiers):
+            current_classifier = getattr(self, 'classifier' + str(i))
+            lst_methods.append(getattr(current_classifier, method_name_src))
+
+        def f(*args, **kwargs):
+            ret = []
+            for i in range(self.nclassifiers):
+                ret.append(lst_methods[i](*args, **kw_args))
+            return ret
+
+        f.__doc__ = method.__doc__
+        f.__name__ = method_name_dst
+        setattr(self, f.__name__, f)
+
+    def reset_parameters(self):
         self.model.reset_parameters()
         for i in range(self.nclassifiers):
             getattr(self, "classifier"+str(i)).reset_parameters()
