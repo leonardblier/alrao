@@ -154,6 +154,21 @@ def generator_lr(module, lr_sampler, memo = None, same_lr = 1, reverse_embedding
         if same_lr == 0:
             lrw = lr_sampler(w, w.size())
         else:
+            if reverse_embedding:
+                lrb = lr_sampler(w, w.size(1))
+                lrw = w.new(w.size())
+                lrw = lrw.t()
+                for k in range(w.size(1)):
+                    lrw[k].fill_(lrb[k])
+                lrw = lrw.t()
+            else:
+                lrb = lr_sampler(w, w.size(0))
+                lrw = w.new(w.size())
+                for k in range(w.size(0)):
+                    lrw[k].fill_(lrb[k])
+        yield lrw
+        """
+
             sz = w.size(0)
             if reverse_embedding: w = w.t()
 
@@ -164,7 +179,7 @@ def generator_lr(module, lr_sampler, memo = None, same_lr = 1, reverse_embedding
 
             if reverse_embedding: lrw = lrw.t()
 
-            """
+            ""
             if reverse_embedding:
                 lrb = lr_sampler(w.t(), w.size(1))
                 lrw = w.new(w.size())
@@ -175,8 +190,9 @@ def generator_lr(module, lr_sampler, memo = None, same_lr = 1, reverse_embedding
                 lrw = w.new(w.size())
                 for k in range(w.size(1)):
                     lrw[k].fill_(lrb[k])
-            """
+            ""
         yield lrw
+        """
     elif isinstance(module, nn.LSTM):
         dct_lr = {}
         for name, p in module._parameters.items():
