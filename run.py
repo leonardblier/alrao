@@ -2,18 +2,30 @@ import sys
 import subprocess
 from sbatch import launch_exp
 
-nb_expes = 1 # number of experiments per set of parameters
+nb_expes = 10 # number of experiments per set of parameters
 
-runOpt = {'env_name': 'test', # name of the environment to be activated
-          'use_slurm': True, # if True, read the slurm options
-          'interactive': False, # must be True if you run an interactive job
-                               # if use_slurm is True and interactive is False,
-                               #     run the script with sbatch
-          'command': 'python', # 'python', 'ipython -i'
-          'script': 'main.py',
-          'temp_file': 'temp_run.sh',
-          'keep_temp_file': False}
+interactive = False
 
+if not interactive:
+    runOpt = {'env_name': 'test', # name of the environment to be activated
+              'use_slurm': True, # if True, read the slurm options
+              'interactive': False, # must be True if you run an interactive job
+              # if use_slurm is True and interactive is False,
+              #     run the script with sbatch
+              'command': 'python', # 'python', 'ipython -i'
+              'script': 'main.py',
+              'temp_file': 'temp_run.sh',
+              'keep_temp_file': False}
+else:
+   runOpt = {'env_name': 'test', # name of the environment to be activated
+              'use_slurm': True, # if True, read the slurm options
+              'interactive': True, # must be True if you run an interactive job
+              # if use_slurm is True and interactive is False,
+              #     run the script with sbatch
+              'command': 'ipython -i',
+              'script': 'main.py',
+              'temp_file': 'temp_run.sh',
+              'keep_temp_file': True} 
 """
 Notes:
   1) if your job is interactive, it is NOT launched automatically; this program
@@ -26,13 +38,13 @@ Notes:
 """
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 10000,
+argsDict = {'epochs': 1000,
             'early_stopping': True,
 #            'size_multiplier': 3,
-            'model_name':'GoogLeNet',
+            'model_name': 'GoogLeNet',#'SENet18'
             'optimizer': 'Adam',
 #            'lr': .025,
-            'use_switch': True,
+#            'use_switch': True,
 #            'minLR': -5,
 #            'maxLR': 1,
             'nb_class': 10,
@@ -64,30 +76,56 @@ sbatchOpt = ['--job-name=mixed_lr',
 #lr_list = [1e-6, 1e-5, 1e-4, 0.1, 0.5, 1., 10.]
 #lr_list_orig = [.025, .05, .01, .005, .001]
 
-lr_list = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1., 10.]
+#MINI, MAXI = -6, 2
+
 argsDict['size_multiplier'] = 1
 argsDict['model_name'] = 'GoogLeNet'
-argsDict['use_switch'] = False
+
+
+MINI, MAXI = -5, -1
+#lr_list = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1., 10.]
+lr_list = [10 ** k for k in range(MINI, MAXI + 1)]
+#lr_list = [3., 10., 30., 100.]
+minmaxlr = [(MINI, MAXI)]
+    
 for i in range(1):
     argsDict['exp_number'] = i
+    argsDict['use_switch'] = False
+        
     for lr in lr_list:
         argsDict['lr'] = lr
         launch_exp(runOpt, sbatchOpt, argsDict)
 
-            
-minmaxlr = [(mini, maxi) for mini in range(-6,2) for maxi in range(mini,2)]
-#minmaxlr = [(-6, maxi) for maxi in range(-6, 2)] + [(mini, 1) for mini in range(-5,2)]
-# minmaxlr = [(mini, mini) for mini in range(-7,3)]
-for i in range(1):
-    argsDict['exp_number'] = i
-    
-    argsDict['lr'] = 0.025
+for i in range(nb_expes):
     argsDict['use_switch'] = True
-
     for (minLR, maxLR) in minmaxlr:
         argsDict['minLR'] = minLR
         argsDict['maxLR'] = maxLR
         launch_exp(runOpt, sbatchOpt, argsDict)
+
+
+
+
+
+#minmaxlr = [(mini, maxi) for mini in range(MINI,MAXI) for maxi in range(mini,MAXI)]
+
+#minmaxlr = [(-6, maxi) for maxi in range(-6, 2)] + [(mini, 1) for mini in range(-5,2)]
+# minmaxlr = [(mini, mini) for mini in range(-7,3)]
+#
+#minmaxlr = [(x,x) for x in range(-4,0)]
+
+
+
+# for i in range(1):
+#     argsDict['exp_number'] = i
+    
+#     argsDict['lr'] = 0#0.025
+#     argsDict['use_switch'] = True
+
+#     for (minLR, maxLR) in minmaxlr:
+#         argsDict['minLR'] = minLR
+#         argsDict['maxLR'] = maxLR
+#         launch_exp(runOpt, sbatchOpt, argsDict)
 
             
     

@@ -32,6 +32,8 @@ def parseArgs():
                         help = 'learning rate (default: .01)')
     parser.add_argument('--momentum', type = float, default = 0., \
                         help = 'momentum')
+    parser.add_argument('--weight_decay', type=float, default = 0., \
+                        help = 'l2 penalty')
     parser.add_argument('--suffix', default = '', \
                         help = 'suffix for the file name')
     parser.add_argument('--exp_number', type = int, default = -1, \

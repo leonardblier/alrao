@@ -8,6 +8,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
+from torch.utils import data
 
 import torchvision
 import torchvision.transforms as transforms
@@ -21,8 +22,13 @@ import numpy as np
 from models import *
 from mymodels import LinearClassifier
 from switch import Switch
-from optim_spec import SGDSwitch, SGDSpec, generator_lr, AdamSpec, AdamSwitch
+from optim_spec import SGDSwitch, SGDSpec, generator_randomlr_neurons, \
+    generator_randomlr_weights, generator_randomdir_neurons, \
+    generator_randomdir_weights, AdamSpec, AdamSwitch
 from earlystopping import EarlyStopping
+
+# TO BE REMOVED
+from utils import Subset
 
 from input import parseArgs
 from output import OutputManager
@@ -35,8 +41,6 @@ from utils import *
 #torch.manual_seed(123)
 
 args = parseArgs()
-
-torch.manual_seed(123)
 
 outputManager = OutputManager(args)
 
@@ -65,11 +69,22 @@ transform_test = transforms.Compose([
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
-trainset = torchvision.datasets.CIFAR10(root='/data/titanic_1/datasets', train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=False, num_workers=2)
+# Train set
+trainset = torchvision.datasets.CIFAR10(root='/data/titanic_1/datasets', train=True,
+                                        download=True, transform=transform_train)
+trainset = Subset(trainset, list(range(0, 40000)))
+trainloader = data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
 
-testset = torchvision.datasets.CIFAR10(root='/data/titanic_1/datasets', train=False, download=True, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
+# Validation set
+validset = torchvision.datasets.CIFAR10(root='/data/titanic_1/datasets', train=True,
+                                        download=True, transform=transform_test)
+validset = Subset(validset, list(range(40000, 50000)))
+validloader = data.DataLoader(validset, batch_size=batch_size, shuffle=False, num_workers=2)
+
+# Test set
+testset = torchvision.datasets.CIFAR10(root='/data/titanic_1/datasets', train=False,
+                                       download=True, transform=transform_test)
+testloader = data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
@@ -108,7 +123,7 @@ class BigModel(nn.Module):
         self.last_x, self.last_lst_logpx = x, lst_logpx
         return self.switch.forward(lst_logpx)
 
-    def update_switch(self, y, x=None, catch_up=True):
+    def update_switch(self, y, x=None, catch_up=False):
         if x is None:
             lst_px = self.last_lst_logpx
         else:
@@ -161,6 +176,14 @@ class BigModel(nn.Module):
         res = "|"+"".join(bars[int(px)] for px in post/post.max() * 8) + "|"
         return res
 
+    def print_norm_parameters(self):
+        #for name, p in self.model.named_parameters():
+        print("Pre-Classifier: {:.0e}".format(\
+            sum(float(p.norm()) for p in self.parameters_model())))
+        for (i, c) in enumerate(self.classifiers()):
+            print("Classifier {}: {:.0e}".format(i,
+                sum(float(p.norm()) for p in c.parameters())))
+
 
 
 
@@ -212,16 +235,24 @@ criterion = nn.NLLLoss()
 
 
 if args.use_switch:
-    classifiers_lr = [np.exp(\
-        np.log(minlr) + k /(args.nb_class-1) * (np.log(maxlr) - np.log(minlr)) \
-                             ) for k in range(args.nb_class)]
-    lr_model = generator_lr(net.model, lr_sampler)
+    if args.nb_class > 1:
+        classifiers_lr = [np.exp(\
+                np.log(minlr) + k /(args.nb_class-1) * (np.log(maxlr) - np.log(minlr)) \
+                ) for k in range(args.nb_class)]
+        print(("Classifiers LR:" + args.nb_class * "{:.1e}, ").format(*tuple(classifiers_lr)))
+    else:
+        classifiers_lr = [minlr]
+
+    lr_model = generator_randomlr_neurons(net.model, lr_sampler)
+
     if args.optimizer == 'SGD':
         optimizer = SGDSwitch(net.parameters_model(),
                               lr_model,
                               net.classifiers_parameters_list(),
                               classifiers_lr,
-                              momentum=args.momentum)
+                              momentum=args.momentum,
+                              weight_decay=args.weight_decay)
+        print('Optimizer is initialized')
     elif args.optimizer == 'Adam':
         optimizer = AdamSwitch(net.parameters_model(),
                                lr_model,
@@ -274,6 +305,7 @@ def train(epoch):
                     maxloss = split_loss.max()
                     maxloss.backward()
                     stop
+            
         
         optimizer.step()
         train_loss += loss.item()
@@ -289,16 +321,9 @@ def train(epoch):
             postfix["PostSw"] = net.repr_posterior()
         pbar.set_postfix(postfix)
         if args.use_switch:
-            net.update_switch(targets, catch_up=batch_idx % 20 == 0)
+            net.update_switch(targets, catch_up=False)
             optimizer.update_posterior(net.posterior())
             
-
-        # if args.use_switch:
-        #     cl_perf = net.switch.get_cl_perf()
-        #     posterior = net.posterior()
-        #     for k in range(len(cl_perf)):
-        #         print("Classifier {}\t Posterior {:.8f}\tLossTrain:{:.8f}\tAccTrain:{:.4f}".format(
-        #             k, posterior[k], cl_perf[k][0], cl_perf[k][1]))
     pbar.close()
 
     if args.use_switch:
@@ -309,7 +334,7 @@ def train(epoch):
 
     return train_loss / (batch_idx + 1), correct / total
 
-def test(epoch):
+def test(epoch, loader):
     global best_acc
     net.eval()
     if args.use_switch:
@@ -317,7 +342,7 @@ def test(epoch):
     test_loss = 0
     correct = 0
     total = 0
-    for batch_idx, (inputs, targets) in enumerate(testloader):
+    for batch_idx, (inputs, targets) in enumerate(loader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         #inputs, targets = Variable(inputs, volatile=True), Variable(targets)
@@ -333,7 +358,7 @@ def test(epoch):
 
     print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
     if args.use_switch:
-        print(("Posterior : "+"{:.3f}, " * args.nb_class).format(*net.posterior()))
+        print(("Posterior : "+"{:.1e}, " * args.nb_class).format(*net.posterior()))
         # cl_perf = net.switch.get_cl_perf()
         # for k in range(len(cl_perf)):
         #     print("Classifier {}\t LossTrain:{:.4f}\tAccTrain:{:.2f}".format(
@@ -348,12 +373,16 @@ if args.early_stopping:
     
 for epoch in range(args.epochs):
     train_nll, train_acc = train(epoch)
-    test_nll, test_acc = test(epoch)
+    print('Validation')
+    valid_nll, valid_acc = test(epoch, validloader)
+    print('Test')
+    test_nll, test_acc = test(epoch, testloader)
     outputManager.updateData(epoch, round(time.time() - t_init), \
                              train_nll, train_acc, \
-                             0, 0, \
+                             valid_nll, valid_acc, \
                              test_nll, test_acc)
-    earlystopping.step(train_nll)
-    if args.early_stopping and earlystopping.stop:
-        print("End of Training because of early stopping at epoch {}".format(epoch))
-        break
+    if args.early_stopping:
+        earlystopping.step(valid_nll)
+        if earlystopping.stop:
+            print("End of Training because of early stopping at epoch {}".format(epoch))
+            break

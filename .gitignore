@@ -1,2 +1,8 @@
 temp_run.sh
 __pycache__
+AAA*
+Data*
+*~
+*.#*
+*.orig
+.ipynb_checkpoints/

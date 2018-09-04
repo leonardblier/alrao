@@ -54,6 +54,9 @@ def genNameBase(args):
         nameBase += 'p' if args.maxLR >= 0 else 'm'
         nameBase += repr(abs(args.maxLR))
 
+    if args.weight_decay != 0.:
+        nameBase += '_wd-' + format(args.weight_decay, '.1e')
+
     if args.momentum != 0.:
         nameBase += '_mom' + repr(args.momentum)
         
