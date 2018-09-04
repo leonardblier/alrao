@@ -6,27 +6,30 @@ from switch import Switch
 
 class AlraoModel(nn.Module):
     r"""
+    AlraoModel is the class transforming a pre-classifier into a model learnable with Alrao.
+
     Arguments:
-        model: model to train, given without its last layer
-        nclassifiers: number of classifiers
-        nclasses: number of classes
-        classifier: python class to use to construct the classifiers
+        preclassifier: pre-classifier preclassifier to train. It is an entire network, given without its last layer.
+        nclassifiers: number of classifiers to use with the model averaging method
+        nclasses: number of classes in the classification task
+        classifier_gen: python class to use to construct the classifiers
     """
-    def __init__(self, model, nclassifiers, classifier, *args, **kwargs):
+    def __init__(self, preclassifier, nclassifiers, classifier_gen, *args, **kwargs):
         super(AlraoModel, self).__init__()
         self.switch = Switch(nclassifiers, save_cl_perf=True)
-        self.model = model
+        self.preclassifier = preclassifier
         self.nclassifiers = nclassifiers
 
         for i in range(nclassifiers):
-            U_classifier = classifier(*args, **kwargs)
+            classifier = classifier_gen(*args, **kwargs)
             setattr(self, "classifier" + str(i), U_classifier)
 
-    def method_fwd_model(self, method_name_src, method_name_dst = None):
+    def method_fwd_preclassifier(self, method_name_src, method_name_dst = None):
         if method_name_dst is None:
             method_name_dst = method_name_src
-        assert getattr(self, method_name_dst, None) is None, 'The method "' + method_name_dst + '" cannot be forwarded: an attribute with the same name already exists.'
-        method = getattr(self.model, method_name_src)
+        assert getattr(self, method_name_dst, None) is None, \
+            'The method {} cannot be forwarded: an attribute with the same name already exists.'.format(method_name_dst)
+        method = getattr(self.preclassifier, method_name_src)
         def f(*args, **kwargs):
             return method(*args, **kwargs)
         f.__doc__ = method.__doc__
@@ -36,46 +39,48 @@ class AlraoModel(nn.Module):
     def method_fwd_classifiers(self, method_name_src, method_name_dst = None):
         if method_name_dst is None:
             method_name_dst = method_name_src
-        assert getattr(self, method_name_src, None) is None, 'The method "' + method_name_dst + '" cannot be forwarded: an attribute with the same name already exists.'
-        lst_methods = []
-        for i in range(self.nclassifiers):
-            current_classifier = getattr(self, 'classifier' + str(i))
-            lst_methods.append(getattr(current_classifier, method_name_src))
+        assert getattr(self, method_name_src, None) is None, \
+            'The method {} cannot be forwarded: an attribute with the same name already exists.'.format(method_name_dst)
+        lst_methods = [getattr(cl, method_name_src) for cl in self.classifiers()]
+        
 
         def f(*args, **kwargs):
-            ret = []
-            for i in range(self.nclassifiers):
-                ret.append(lst_methods[i](*args, **kw_args))
-            return ret
+            return [method(*args, **kwargs) for method in lst_methods]
 
-        f.__doc__ = method.__doc__
+        f.__doc__ = lst_methods[0].__doc__
         f.__name__ = method_name_dst
         setattr(self, f.__name__, f)
 
     def reset_parameters(self):
-        self.model.reset_parameters()
-        for i in range(self.nclassifiers):
-            getattr(self, "classifier"+str(i)).reset_parameters()
+        self.preclassifier.reset_parameters()
+        for cl in self.classifiers():
+            cl.reset_parameters()
 
     def forward(self, *args, **kwargs):
         r"""
-        input x -> x = self.model(x)
+        input x -> x = self.preclassifier(x)
         either 'x' is a scalar or a tuple:
             - 'x' is a scalar: 'x' is used as input of each classifier
             - 'x' is a tuple: 'x[0]' is used as input of each classifier
         """
-        x = self.model(*args, **kwargs)
-        if isinstance(x, tuple):
-            x0 = x[0]
-            lst_logpx = [cl(x0) for cl in self.classifiers()]
-            self.last_x, self.last_lst_logpx = x0, lst_logpx
-            return (self.switch.forward(lst_logpx),) + x[1:]
-        else:
-            lst_logpx = [cl(x) for cl in self.classifiers()]
-            self.last_x, self.last_lst_logpx = x, lst_logpx
-            return self.switch.forward(lst_logpx)
+        x = self.preclassifier(*args, **kwargs)
 
-    def update_switch(self, y, x=None, catch_up=True):
+        z = x
+        if isinstance(z, tuple):
+            z = x[0]
+        
+        lst_logpx = [cl(z) for cl in self.classifiers()]
+        self.last_x, self.last_lst_logpx = z, lst_logpx
+        out = self.switch.forward(lst_logpx)
+        
+        if isinstance(x, tuple):
+            out = (out,) + x[1:]
+        return out
+
+    def update_switch(self, y, x=None, catch_up=False):
+        """
+        Updates the model averaging weights
+        """
         if x is None:
             lst_px = self.last_lst_logpx
         else:
@@ -86,6 +91,10 @@ class AlraoModel(nn.Module):
             self.hard_catch_up()
 
     def hard_catch_up(self, threshold=-20):
+        """
+        The hard catch up allows to reset all the classifiers with low performance, and to
+        set their weights to the best classifier ones. This can be done periodically during learning
+        """
         logpost = self.switch.logposterior
         weak_cl = [cl for cl, lp in zip(self.classifiers(), logpost) if lp < threshold]
         if len(weak_cl) == 0:
@@ -101,8 +110,8 @@ class AlraoModel(nn.Module):
             cl.fc.weight.data = mean_weight.clone()
             cl.fc.bias.data = mean_bias.clone()
 
-    def parameters_model(self):
-        return self.model.parameters()
+    def parameters_preclassifier(self):
+        return self.preclassifier.parameters()
 
     def classifiers(self):
         for i in range(self.nclassifiers):
@@ -117,7 +126,7 @@ class AlraoModel(nn.Module):
     def classifiers_predictions(self, x=None):
         if x is None:
             return self.last_lst_logpx
-        x = self.model(x)
+        x = self.preclassifier(x)
         lst_px = [cl(x) for cl in self.classifiers()]
         self.last_lst_logpx = lst_px
         return lst_px
@@ -127,3 +136,11 @@ class AlraoModel(nn.Module):
         bars = u' ▁▂▃▄▅▆▇█'
         res = "|"+"".join(bars[int(px)] for px in post/post.max() * 8) + "|"
         return res
+
+    def print_norm_parameters(self):
+        print("Pre-Classifier: {:.0e}".format(\
+            sum(float(p.norm()) for p in self.parameters_preclassifier())))
+        for (i, c) in enumerate(self.classifiers()):
+            print("Classifier {}: {:.0e}".format(i,
+                sum(float(p.norm()) for p in c.parameters())))
+

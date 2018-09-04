@@ -22,9 +22,9 @@ import numpy as np
 from models import *
 from mymodels import LinearClassifier
 from switch import Switch
-from optim_spec import SGDSwitch, SGDSpec, generator_randomlr_neurons, \
-    generator_randomlr_weights, generator_randomdir_neurons, \
-    generator_randomdir_weights, AdamSpec, AdamSwitch, lr_sampler_generic
+from optim_spec import SGDSwitch, SGDSpec, AdamSpec, AdamSwitch, 
+from learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
+
 from earlystopping import EarlyStopping
 from alrao_model import AlraoModel
 # TO BE REMOVED
@@ -89,7 +89,7 @@ testloader = data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 
-def build_model(model_name, *args, **kwargs):
+def build_preclassifier(model_name, *args, **kwargs):
     if model_name == "VGG16":
         return VGG('VGG16')
     elif model_name == "VGG19":
@@ -105,122 +105,34 @@ def build_model(model_name, *args, **kwargs):
     else:
         raise ValueError("Unknown model name : {}".format(model_name))
 
-class BigModel(nn.Module):
-    r"""
-    Arguments:
-        model: model to train, given without its last layer
-        nclassifiers: number of classifiers
-        nclasses: number of classes
-        classifier: python class to use to construct the classifiers
-    """
-    def __init__(self, model, nclassifiers, nclasses, classifier_gen):
-        super(BigModel, self).__init__()
-        self.switch = Switch(nclassifiers, save_cl_perf=True)
-        #self.model = VGGNet(args.size_multiplier)
-        self.model = model #
-        self.nclassifiers = nclassifiers
-
-        for i in range(nclassifiers):
-
-            classifier = classifier_gen(self.model.linearinputdim, nclasses)
-            setattr(self, "classifier"+str(i), U_classifier)
-
-
-    def forward(self, x):
-        x = self.model(x)
-        lst_logpx = [cl(x) for cl in self.classifiers()]
-        self.last_x, self.last_lst_logpx = x, lst_logpx
-        return self.switch.forward(lst_logpx)
-
-    def update_switch(self, y, x=None, catch_up=False):
-        if x is None:
-            lst_px = self.last_lst_logpx
-        else:
-            lst_px = [cl(x) for cl in self.classifiers()]
-        self.switch.Supdate(lst_px, y)
-
-        if catch_up:
-            self.hard_catch_up()
-
-    def hard_catch_up(self, threshold=-20):
-        logpost = self.switch.logposterior
-        weak_cl = [cl for cl, lp in zip(self.classifiers(), logpost) if lp < threshold]
-        if len(weak_cl) == 0:
-            return None
-
-        mean_weight = torch.stack(
-            [cl.fc.weight * p for (cl, p) in zip(self.classifiers(), logpost.exp())],
-            dim=-1).sum(dim=-1).detach()
-        mean_bias = torch.stack(
-            [cl.fc.bias * p for (cl, p) in zip(self.classifiers(), logpost.exp())],
-            dim=-1).sum(dim=-1).detach()
-        for cl in weak_cl:
-            cl.fc.weight.data = mean_weight.clone()
-            cl.fc.bias.data = mean_bias.clone()
-
-    def parameters_model(self):
-        return self.model.parameters()
-
-    def classifiers(self):
-        for i in range(self.nclassifiers):
-            yield getattr(self, "classifier"+str(i))
-
-    def classifiers_parameters_list(self):
-        return [cl.parameters() for cl in self.classifiers()]
-
-    def posterior(self):
-        return self.switch.logposterior.exp()
-
-    def classifiers_predictions(self, x=None):
-        if x is None:
-            return self.last_lst_logpx
-        x = self.model(x)
-        lst_px = [cl(x) for cl in self.classifiers()]
-        self.last_lst_logpx = lst_px
-        return lst_px
-
-    def repr_posterior(self):
-        post = self.posterior()
-        bars = u' ▁▂▃▄▅▆▇█'
-        res = "|"+"".join(bars[int(px)] for px in post/post.max() * 8) + "|"
-        return res
-
-    def print_norm_parameters(self):
-        #for name, p in self.model.named_parameters():
-        print("Pre-Classifier: {:.0e}".format(\
-            sum(float(p.norm()) for p in self.parameters_model())))
-        for (i, c) in enumerate(self.classifiers()):
-            print("Classifier {}: {:.0e}".format(i,
-                sum(float(p.norm()) for p in c.parameters())))
-
-
 
 
 
 class StandardModel(nn.Module):
-    def __init__(self, K=1):
+    def __init__(self, preclassifier, K=1):
         super(StandardModel, self).__init__()
-        self.model = build_model(args.model_name, gamma=K)
-        self.classifier = LinearClassifier(self.model.linearinputdim, 10)
+        self.preclassifier = preclassifier
+        self.classifier = LinearClassifier(self.preclassifier.linearinputdim, 10)
 
     def forward(self, x):
-        x = self.model(x)
+        x = self.preclassifier(x)
         return self.classifier(x)
 
 base_lr = args.lr
 minlr = 10 ** args.minLR
 maxlr = 10 ** args.maxLR
 
+preclassifier = build_preclassifier(args.model_name, gamma=args.size_multiplier)
 if args.use_switch:
-    model = build_model(args.model_name, gamma=args.size_multiplier)
-    net = AlraoModel(model, args.nb_class, LinearClassifier, model.linearinputdim, 10)
-    total_param = sum(np.prod(p.size()) for p in net.parameters_model())
+    
+    net = AlraoModel(preclassifier, args.nb_class, LinearClassifier, preclassifier.linearinputdim, 10)
+    total_param = sum(np.prod(p.size()) for p in net.parameters_preclassifier())
     total_param += sum(np.prod(p.size()) \
                        for lcparams in net.classifiers_parameters_list() \
                        for p in lcparams)
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 else:
-    net = StandardModel(args.size_multiplier)
+    net = StandardModel(preclassifier)
     total_param = sum(np.prod(p.size()) for p in net.parameters())
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 
@@ -240,19 +152,19 @@ if args.use_switch:
     else:
         classifiers_lr = [minlr]
 
-    lr_model = generator_randomlr_neurons(net.model, lr_sampler)
+    lr_sampler = lr_sampler_generic(minlr, maxlr)
+    lr_preclassifier = generator_randomlr_neurons(net.preclassifier, lr_sampler)
 
     if args.optimizer == 'SGD':
-        optimizer = SGDSwitch(net.parameters_model(),
-                              lr_model,
+        optimizer = SGDSwitch(net.parameters_preclassifier(),
+                              lr_preclassifier,
                               net.classifiers_parameters_list(),
                               classifiers_lr,
                               momentum=args.momentum,
                               weight_decay=args.weight_decay)
-        print('Optimizer is initialized')
     elif args.optimizer == 'Adam':
-        optimizer = AdamSwitch(net.parameters_model(),
-                               lr_model,
+        optimizer = AdamSwitch(net.parameters_preclassifier(),
+                               lr_preclassifier,
                                net.classifiers_parameters_list(),
                                classifiers_lr)
 
@@ -356,10 +268,7 @@ def test(epoch, loader):
     print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
     if args.use_switch:
         print(("Posterior : "+"{:.1e}, " * args.nb_class).format(*net.posterior()))
-        # cl_perf = net.switch.get_cl_perf()
-        # for k in range(len(cl_perf)):
-        #     print("Classifier {}\t LossTrain:{:.4f}\tAccTrain:{:.2f}".format(
-        #         k, cl_perf[k][0], cl_perf[k][1]))
+        
     return test_loss / (batch_idx + 1), correct / total
 
 
