@@ -106,16 +106,25 @@ def build_model(model_name, *args, **kwargs):
         raise ValueError("Unknown model name : {}".format(model_name))
 
 class BigModel(nn.Module):
-    def __init__(self, nclassifiers):
+    r"""
+    Arguments:
+        model: model to train, given without its last layer
+        nclassifiers: number of classifiers
+        nclasses: number of classes
+        classifier: python class to use to construct the classifiers
+    """
+    def __init__(self, model, nclassifiers, nclasses, classifier_gen):
         super(BigModel, self).__init__()
-        self.switch = Switch(nclassifiers, save_cl_perf=True)        
+        self.switch = Switch(nclassifiers, save_cl_perf=True)
         #self.model = VGGNet(args.size_multiplier)
-        self.model = build_model(args.model_name, gamma=args.size_multiplier)
+        self.model = model #
         self.nclassifiers = nclassifiers
 
         for i in range(nclassifiers):
-            classifier = LinearClassifier(self.model.linearinputdim, 10)
-            setattr(self, "classifier"+str(i), classifier)
+
+            classifier = classifier_gen(self.model.linearinputdim, nclasses)
+            setattr(self, "classifier"+str(i), U_classifier)
+
 
     def forward(self, x):
         x = self.model(x)
@@ -216,7 +225,8 @@ def lr_sampler(tensor, size):
 
 
 if args.use_switch:
-    net = BigModel(args.nb_class)
+    model = build_model(args.model_name, gamma=args.size_multiplier)
+    net = BigModel(model, args.nb_class, 10, LinearClassifier)
     total_param = sum(np.prod(p.size()) for p in net.parameters_model())
     total_param += sum(np.prod(p.size()) \
                        for lcparams in net.classifiers_parameters_list() \
@@ -291,7 +301,7 @@ def train(epoch):
         loss = criterion(outputs, targets)
         loss.backward()
 
-        
+
         if args.use_switch:
             optimizer.classifiers_zero_grad()
             newx = net.last_x.detach()
@@ -354,7 +364,7 @@ def test(epoch, loader):
         _, predicted = torch.max(outputs, 1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
-        
+
 
     print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
     if args.use_switch:
@@ -370,7 +380,7 @@ def test(epoch, loader):
 t_init = time.time()
 if args.early_stopping:
     earlystopping = EarlyStopping('min', patience=20)
-    
+
 for epoch in range(args.epochs):
     train_nll, train_acc = train(epoch)
     print('Validation')

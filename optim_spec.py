@@ -127,7 +127,7 @@ def generator_randomdir_weights(module, lr_sampler, memo=None):
 class AdamSpec(optim.Optimizer):
     def __init__(self, params, lr_params, betas = (.9, .999), eps = 1e-8,
                  weight_decay=0, amsgrad=False):
-        
+
         defaults = dict(betas=betas, eps=eps, weight_decay=weight_decay,
                         amsgrad=amsgrad)
         super(AdamSpec, self).__init__(params, defaults)
@@ -139,7 +139,7 @@ class AdamSpec(optim.Optimizer):
         super(Adam, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('amsgrad', False)
-            
+
     def step(self, closure=None):
         loss = None
         if closure is not None:
@@ -194,8 +194,6 @@ class AdamSpec(optim.Optimizer):
                 step_size = math.sqrt(bias_correction2) / bias_correction1
                 p.data.addcdiv_(-step_size, torch.mul(exp_avg, lr_p), denom)
         return loss
-    
-        
 
 
 
@@ -206,16 +204,16 @@ class SGDSpec(optim.Optimizer):
         defaults = dict(momentum=momentum, dampening=dampening,
                         weight_decay=weight_decay, nesterov=nesterov)
         super(SGDSpec, self).__init__(params, defaults)
-        
+
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
-            
+
 
     def __setstate__(self, state):
         super(SGD, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
-    
+
     def step(self, closure=None):
         loss = None
         if closure is not None:
@@ -226,7 +224,7 @@ class SGDSpec(optim.Optimizer):
             momentum = group['momentum']
             dampening = group['dampening']
             nesterov = group['nesterov']
-            
+
             for p, lr_p in zip(group['params'], group['lr_list']):
                 if p.grad is None:
                     continue
@@ -349,8 +347,8 @@ class OptSwitch:
             self.optmodel.zero_grad()
         for opt in self.optclassifiers:
             opt.zero_grad()
-    
-    
+
+
 class SGDSwitch(OptSwitch):
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
                  classifiers_lr, momentum=0., weight_decay=0.):
@@ -358,16 +356,11 @@ class SGDSwitch(OptSwitch):
         super(SGDSwitch, self).__init__()
         self.optmodel = SGDSpec(parameters_model, lr_model,
                                 momentum=momentum, weight_decay=weight_decay)
-        #self.optmodel = SGDRandDirNeuronsSpec(parameters_model, lr_model)
-        #self.optmodel = SGDRandDirWeightsSpec(parameters_model, lr_model)
-        
         self.classifiers_lr = classifiers_lr
         self.optclassifiers = \
             [optim.SGD(parameters, lr, momentum=momentum, weight_decay=weight_decay) \
              for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
-        
 
-    
 
 class AdamSwitch(OptSwitch):
     def __init__(self, parameters_model, lr_model, classifiers_parameters_list,
@@ -375,12 +368,7 @@ class AdamSwitch(OptSwitch):
 
         super(AdamSwitch, self).__init__()
         #self.classifiers_lr = classifiers_lr
-        print("Adam Kwargs :"+repr(kwargs))
+
         self.optmodel = AdamSpec(parameters_model, lr_model, **kwargs)
         self.optclassifiers = [optim.Adam(parameters, lr, **kwargs) \
              for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
-        
-
-   
-
-            
