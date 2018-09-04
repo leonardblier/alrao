@@ -21,7 +21,7 @@ import numpy as np
 from models import *
 from mymodels import LinearClassifier
 from switch import Switch
-from optim_spec import SGDSwitch, SGDSpec, generator_lr
+from optim_spec import SGDSwitch, SGDSpec, generator_lr, lr_sampler_generic
 from earlystopping import EarlyStopping
 from alrao_model import AlraoModel
 
@@ -106,19 +106,6 @@ base_lr = args.lr
 minlr = 10 ** args.minLR
 maxlr = 10 ** args.maxLR
 
-
-def lr_sampler(tensor, size):
-    """
-    Takes a torch tensor as input and sample a tensor with same size for
-    learning rates
-    """
-
-    lr = tensor.new(size).uniform_()
-    lr = (lr * (np.log(maxlr) - np.log(minlr)) + np.log(minlr)).exp()
-    #lr.fill_(base_lr)
-    return lr
-
-
 if args.use_switch:
     model = build_model(args.model_name, gamma=args.size_multiplier)
     net = AlraoModel(model, args.nb_class, LinearClassifier, model.linearinputdim, 10)
@@ -146,7 +133,7 @@ if args.use_switch:
     classifiers_lr = [np.exp(np.log(classifier_minlr) + k * (np.log(classifier_maxlr) - np.log(classifier_minlr))/args.nb_class) \
                       for k in range(args.nb_class)]
 
-    lr_model = generator_lr(net.model, lr_sampler)
+    lr_model = generator_lr(net.model, lr_sampler_generic(minlr, maxlr))
 
     optimizer = SGDSwitch(net.parameters_model(),
                           lr_model,

@@ -15,8 +15,7 @@ class AlraoModel(nn.Module):
     def __init__(self, model, nclassifiers, classifier, *args, **kwargs):
         super(AlraoModel, self).__init__()
         self.switch = Switch(nclassifiers, save_cl_perf=True)
-        #self.model = VGGNet(args.size_multiplier)
-        self.model = model #
+        self.model = model
         self.nclassifiers = nclassifiers
 
         for i in range(nclassifiers):
