@@ -24,9 +24,9 @@ from mymodels import LinearClassifier
 from switch import Switch
 from optim_spec import SGDSwitch, SGDSpec, generator_randomlr_neurons, \
     generator_randomlr_weights, generator_randomdir_neurons, \
-    generator_randomdir_weights, AdamSpec, AdamSwitch
+    generator_randomdir_weights, AdamSpec, AdamSwitch, lr_sampler_generic
 from earlystopping import EarlyStopping
-
+from alrao_model import AlraoModel
 # TO BE REMOVED
 from utils import Subset
 
@@ -211,22 +211,9 @@ base_lr = args.lr
 minlr = 10 ** args.minLR
 maxlr = 10 ** args.maxLR
 
-
-def lr_sampler(tensor, size):
-    """
-    Takes a torch tensor as input and sample a tensor with same size for
-    learning rates
-    """
-
-    lr = tensor.new(size).uniform_()
-    lr = (lr * (np.log(maxlr) - np.log(minlr)) + np.log(minlr)).exp()
-    #lr.fill_(base_lr)
-    return lr
-
-
 if args.use_switch:
     model = build_model(args.model_name, gamma=args.size_multiplier)
-    net = BigModel(model, args.nb_class, 10, LinearClassifier)
+    net = AlraoModel(model, args.nb_class, LinearClassifier, model.linearinputdim, 10)
     total_param = sum(np.prod(p.size()) for p in net.parameters_model())
     total_param += sum(np.prod(p.size()) \
                        for lcparams in net.classifiers_parameters_list() \

@@ -95,6 +95,7 @@ for i in range(1):
     for lr in lr_list:
         argsDict['lr'] = lr
         launch_exp(runOpt, sbatchOpt, argsDict)
+"""
 
 for i in range(nb_expes):
     argsDict['use_switch'] = True
