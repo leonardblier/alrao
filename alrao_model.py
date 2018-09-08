@@ -22,7 +22,7 @@ class AlraoModel(nn.Module):
 
         for i in range(nclassifiers):
             classifier = classifier_gen(*args, **kwargs)
-            setattr(self, "classifier" + str(i), U_classifier)
+            setattr(self, "classifier" + str(i), classifier)
 
     def method_fwd_preclassifier(self, method_name_src, method_name_dst = None):
         if method_name_dst is None:

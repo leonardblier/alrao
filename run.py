@@ -42,7 +42,7 @@ argsDict = {'epochs': 1000,
             'early_stopping': True,
 #            'size_multiplier': 3,
             'model_name': 'GoogLeNet',#'SENet18'
-            'optimizer': 'Adam',
+#            'optimizer': 'Adam',
 #            'lr': .025,
 #            'use_switch': True,
 #            'minLR': -5,
@@ -79,98 +79,75 @@ sbatchOpt = ['--job-name=mixed_lr',
 #MINI, MAXI = -6, 2
 
 argsDict['size_multiplier'] = 1
-argsDict['model_name'] = 'GoogLeNet'
+#argsDict['model_name'] = 'GoogLeNet'
 
 
-MINI, MAXI = -5, -1
-#lr_list = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1., 10.]
-lr_list = [10 ** k for k in range(MINI, MAXI + 1)]
-#lr_list = [3., 10., 30., 100.]
-minmaxlr = [(MINI, MAXI)]
+# MINI, MAXI = -6, 0
+# #lr_list = [10 ** k for k in range(MINI, MAXI + 1)]
+
+# lr_list = [10 ** (-k) for k in range(2,6)]
+# minmaxlr = [(MINI, MAXI)]
     
-for i in range(1):
-    argsDict['exp_number'] = i
-    argsDict['use_switch'] = False
-        
-    for lr in lr_list:
-        argsDict['lr'] = lr
-        launch_exp(runOpt, sbatchOpt, argsDict)
-"""
-
-for i in range(nb_expes):
-    argsDict['use_switch'] = True
-    for (minLR, maxLR) in minmaxlr:
-        argsDict['minLR'] = minLR
-        argsDict['maxLR'] = maxLR
-        launch_exp(runOpt, sbatchOpt, argsDict)
-
-
-
-
-
-#minmaxlr = [(mini, maxi) for mini in range(MINI,MAXI) for maxi in range(mini,MAXI)]
-
-#minmaxlr = [(-6, maxi) for maxi in range(-6, 2)] + [(mini, 1) for mini in range(-5,2)]
-# minmaxlr = [(mini, mini) for mini in range(-7,3)]
-#
-#minmaxlr = [(x,x) for x in range(-4,0)]
-
-
-
-# for i in range(1):
+# for i in range(1, nb_expes):
 #     argsDict['exp_number'] = i
-    
-#     argsDict['lr'] = 0#0.025
-#     argsDict['use_switch'] = True
+#     argsDict['use_switch'] = False
+        
+#     for lr in lr_list:
+#         argsDict['lr'] = lr
+#         launch_exp(runOpt, sbatchOpt, argsDict)
 
+# for i in range(nb_expes):
+#     argsDict['use_switch'] = True
 #     for (minLR, maxLR) in minmaxlr:
 #         argsDict['minLR'] = minLR
 #         argsDict['maxLR'] = maxLR
 #         launch_exp(runOpt, sbatchOpt, argsDict)
 
-            
+
+for model_name in ['VGG19', 'SENet18', "MobileNetV2"]:
+    argsDict['model_name'] = model_name
+    #
+
+    #  Adam
+    argsDict['optimizer'] = 'Adam'
+    MINI, MAXI = -6, 0
+    lr_list = [10 ** k for k in range(MINI, MAXI + 1)]
+    minmaxlr = [(MINI, MAXI)]
     
-
-        # argsDict['use_switch'] = False
-        # argsDict['size_multiplier'] = 1
-        # for lr in lr_list:
-        #     argsDict['lr'] = lr
-        #     for i in range(3):
-        #         argsDict['exp_number'] = i
-        #         launch_exp(runOpt, sbatchOpt, argsDict)
+    for i in range(1):
+        argsDict['exp_number'] = i
+        argsDict['use_switch'] = False
         
-        # argsDict['use_switch'] = False
-        # argsDict['size_multiplier'] = 3
-        # for lr in lr_list:
-        #     argsDict['lr'] = lr
-        #     for i in range(3):
-        #         argsDict['exp_number'] = i
-        #         launch_exp(runOpt, sbatchOpt, argsDict)
-
-
-
-            
-# Send the tasks
-"""
-gridDict = {'lr': [.0001, .001, .01, .1]}
-for argsDict['lr'] in gridDict['lr']:
-    if nb_expes > 1:
-        for i in range(nb_expes):
-            argsDict['exp_number'] = i
+        for lr in lr_list:
+            argsDict['lr'] = lr
             launch_exp(runOpt, sbatchOpt, argsDict)
-    else:
-        launch_exp(runOpt, sbatchOpt, argsDict)
-"""
 
-"""
-gridDict = {'size_multiplier': [1, 2, 3],
-            'nb_class': [1, 5, 10]}
-for argsDict['size_multiplier'] in gridDict['size_multiplier']:
-    for argsDict['nb_class'] in gridDict['nb_class']:
-        if nb_expes > 1:
-            for i in range(nb_expes):
-                argsDict['exp_number'] = i
-                launch_exp(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict)
-        else:
-            launch_exp(py_file_name, env_name, temp_file_name, sbatchOpt, argsDict)
-"""
+    for i in range(nb_expes):
+        argsDict['use_switch'] = True
+        for (minLR, maxLR) in minmaxlr:
+            argsDict['minLR'] = minLR
+            argsDict['maxLR'] = maxLR
+            launch_exp(runOpt, sbatchOpt, argsDict)
+
+
+    #  SGD
+    argsDict['optimizer'] = 'SGD'
+    MINI, MAXI = -5, 1
+    lr_list = [10 ** k for k in range(MINI, MAXI + 1)]
+    minmaxlr = [(MINI, MAXI)]
+    
+    for i in range(1):
+        argsDict['exp_number'] = i
+        argsDict['use_switch'] = False
+        
+        for lr in lr_list:
+            argsDict['lr'] = lr
+            launch_exp(runOpt, sbatchOpt, argsDict)
+
+    for i in range(nb_expes):
+        argsDict['use_switch'] = True
+        for (minLR, maxLR) in minmaxlr:
+            argsDict['minLR'] = minLR
+            argsDict['maxLR'] = maxLR
+            launch_exp(runOpt, sbatchOpt, argsDict)
+
