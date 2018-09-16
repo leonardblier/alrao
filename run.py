@@ -104,25 +104,27 @@ argsDict['size_multiplier'] = 1
 #         launch_exp(runOpt, sbatchOpt, argsDict)
 
 
-for model_name in ['VGG19', 'SENet18', "MobileNetV2"]:
+for model_name in ["MobileNetV2"]:#, ]:#['VGG19']:#, 'SENet18', "MobileNetV2"]:
     argsDict['model_name'] = model_name
     #
 
     #  Adam
     argsDict['optimizer'] = 'Adam'
-    MINI, MAXI = -6, 0
+    MINI, MAXI = -6, -3
     lr_list = [10 ** k for k in range(MINI, MAXI + 1)]
+    #lr_list = [10 ** k for k in [-4, -5, -6]]
     minmaxlr = [(MINI, MAXI)]
     
+    # for i in range(1):
+    #     argsDict['exp_number'] = i
+    #     argsDict['use_switch'] = False
+        
+    #     for lr in lr_list:
+    #         argsDict['lr'] = lr
+    #         launch_exp(runOpt, sbatchOpt, argsDict)
+
     for i in range(1):
         argsDict['exp_number'] = i
-        argsDict['use_switch'] = False
-        
-        for lr in lr_list:
-            argsDict['lr'] = lr
-            launch_exp(runOpt, sbatchOpt, argsDict)
-
-    for i in range(nb_expes):
         argsDict['use_switch'] = True
         for (minLR, maxLR) in minmaxlr:
             argsDict['minLR'] = minLR
@@ -134,20 +136,22 @@ for model_name in ['VGG19', 'SENet18', "MobileNetV2"]:
     argsDict['optimizer'] = 'SGD'
     MINI, MAXI = -5, 1
     lr_list = [10 ** k for k in range(MINI, MAXI + 1)]
+    #lr_list = [10 ** k for k in [-3, -2, -1, 0, 1]]
     minmaxlr = [(MINI, MAXI)]
     
-    for i in range(1):
-        argsDict['exp_number'] = i
-        argsDict['use_switch'] = False
+    # for i in range(1):
+    #     argsDict['exp_number'] = i
+    #     argsDict['use_switch'] = False
         
-        for lr in lr_list:
-            argsDict['lr'] = lr
-            launch_exp(runOpt, sbatchOpt, argsDict)
+    #     for lr in lr_list:
+    #         argsDict['lr'] = lr
+    #         launch_exp(runOpt, sbatchOpt, argsDict)
 
-    for i in range(nb_expes):
-        argsDict['use_switch'] = True
-        for (minLR, maxLR) in minmaxlr:
-            argsDict['minLR'] = minLR
-            argsDict['maxLR'] = maxLR
-            launch_exp(runOpt, sbatchOpt, argsDict)
+    # for i in range(1):
+    #     argsDict['exp_number'] = i
+    #     argsDict['use_switch'] = True
+    #     for (minLR, maxLR) in minmaxlr:
+    #         argsDict['minLR'] = minLR
+    #         argsDict['maxLR'] = maxLR
+    #         launch_exp(runOpt, sbatchOpt, argsDict)
 
