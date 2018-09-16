@@ -38,7 +38,7 @@ Notes:
 """
 
 # List of options added when launching 'py_file_name'
-argsDict = {'epochs': 1000,
+argsDict = {'epochs': 10,
             'early_stopping': True,
 #            'size_multiplier': 3,
             'model_name': 'GoogLeNet',#'SENet18'
@@ -54,7 +54,7 @@ argsDict = {'epochs': 1000,
 #            'penalty': True,
 #            'dropOut': 0, # def: 0
 
-            'suffix': '',#'sqrtmomentum',#, # def: ''
+            'suffix': 'testlr',#'sqrtmomentum',#, # def: ''
             'exp_number': -1, # def: -1
             'stats': False}
 
@@ -103,14 +103,15 @@ argsDict['size_multiplier'] = 1
 #         argsDict['maxLR'] = maxLR
 #         launch_exp(runOpt, sbatchOpt, argsDict)
 
-
-for model_name in ["MobileNetV2"]:#, ]:#['VGG19']:#, 'SENet18', "MobileNetV2"]:
+i = 0
+for model_name in ["MobileNetV2", 'VGG19', 'SENet18', "GoogLeNet"]:
+    
     argsDict['model_name'] = model_name
     #
 
     #  Adam
     argsDict['optimizer'] = 'Adam'
-    MINI, MAXI = -6, -3
+    MINI, MAXI = -6, -1
     lr_list = [10 ** k for k in range(MINI, MAXI + 1)]
     #lr_list = [10 ** k for k in [-4, -5, -6]]
     minmaxlr = [(MINI, MAXI)]
@@ -123,9 +124,11 @@ for model_name in ["MobileNetV2"]:#, ]:#['VGG19']:#, 'SENet18', "MobileNetV2"]:
     #         argsDict['lr'] = lr
     #         launch_exp(runOpt, sbatchOpt, argsDict)
 
-    for i in range(1):
+    #for i in range(1):
+    for lr in [1.e-6,1.e-1]:
         argsDict['exp_number'] = i
         argsDict['use_switch'] = True
+        argsDict['lr'] = lr
         for (minLR, maxLR) in minmaxlr:
             argsDict['minLR'] = minLR
             argsDict['maxLR'] = maxLR
