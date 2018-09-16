@@ -16,10 +16,12 @@ def load_data_files(directory='Results/'):
     
     for filename in os.listdir(directory):
         if not re.match('Data.*', filename):
-            raise ValueError
+            #raise ValueError
+            continue
 
 
         expname = re.sub('Data_|_exp-.|.txt','', filename)
+        #expname = re.sub('Data_|.txt','', filename)
         #print("filename:{}\t expname:{}".format(filename, expname))
         listfile[expname].append(filename)
 
@@ -91,58 +93,97 @@ def load_data_files(directory='Results/'):
     return explist
 
 
+
+
 def results(explist):
-    
+    mykeys = ["lvalid","avalid","ltest","atest"]
     for exp in explist:
         
-        
-        mykeys = ["lvalid","avalid","ltest","atest"]
         bestmet = dict((k, []) for k in mykeys)
+        for k in ['tcv', 'epcv', 'tbest', 'epbest']:
+            bestmet[k] = []
+        bestmet["epcv"] = []
         exp["averagedmet"] = {}
         for exprun in exp['metrics']:
             bestepoch = min(enumerate(exprun["lvalid"]), key=lambda x:x[1])[0]
             for k in mykeys:
                 bestmet[k].append(exprun[k][bestepoch])
+            bestmet['tcv'].append(exprun['t'][-1])
+            bestmet['epcv'].append(len(exprun['t']))
+            bestmet['tbest'].append(exprun['t'][bestepoch])
+            bestmet['epbest'].append(bestepoch)
 
-        for k in mykeys:
+        for k in mykeys + ['tcv', 'epcv', 'tbest', 'epbest']:
             values = np.array(bestmet[k])
             mean, std = values.mean(), values.std()
             #print("{}\t {} ± {}".format(k, mean, std))
             exp["averagedmet"][k] = (mean,std)
 
-    print('----------')
-    for exp in sorted(explist, key=lambda exp:exp["averagedmet"]["ltest"][0]):
-        print(exp["files"][0])
-        for k in mykeys:
-            mean, std = exp["averagedmet"][k]
-            print("{}\t {} ± {}".format(k, mean, std))
 
-        print('--')
+    modelnameslist = set(exp["modelname"] for exp in explist)
+    opt = ["SGD", "Adam"]
+
+    for modelname, opt in product(modelnameslist, opt):
+        print("Experiments {} with {}".format(modelname, opt))
+        subexplist = [exp for exp in explist if exp["modelname"] == modelname and exp["opt"] == opt]
+
+        if any(not exp["alrao"] for exp in subexplist):
+        
+            expbestlr = min([exp for exp in subexplist if not exp["alrao"]],
+                            key = lambda exp:exp["averagedmet"]["lvalid"][0])
+            print_exp(expbestlr)
+
+        alraoexp = [exp for exp in subexplist if exp["alrao"]]
+        if len(alraoexp) != 0:
+            for exp in alraoexp:
+                print_exp(exp)
+
+        print(' ')
         
         
+def print_exp(exp):
+    textlist = []
+    if exp['alrao']:
+        textlist.append("Alrao 1e{} -> 1e{}".format(exp['minlr'], exp['maxlr']))
+    else:
+        textlist.append("lr:{:.1e}".format(exp['lr']))
 
+    for k in ["lvalid","avalid","ltest","atest"]: 
+        textlist.append("{}: {:.4f} ± {:.4f}".format(k, *exp["averagedmet"][k]))
+    textlist.append('\n')
+    for k in ['tcv', 'epcv', 'tbest', 'epbest']:
+        textlist.append("{}: {:.0f} ± {:.0f}".format(k, *exp["averagedmet"][k]))
+
+    print('\t'.join(textlist))
 
 def plot_learning_curves(explist, namefile='learningcurves.eps'):
-    minidx, maxidx = 0, 100
+    minidx, maxidx = 0, 80
 
     
-    fig, axes = plt.subplots(2, 2, figsize=(12.,10.))
-    
+    fig, axes = plt.subplots(1,2, figsize=(10.,4.))
+
+    lrlist = [np.log(exp['lr']) for exp in explist if not exp['alrao']]
+    if len(lrlist) > 0:
+        cnorm = matplotlib.colors.Normalize(vmin=min(lrlist), vmax=max(lrlist))
+        cm = matplotlib.cm.ScalarMappable(norm=cnorm, cmap='plasma')
+                 
         
-    for title, ax in zip(["ltrain", "atrain", "ltest", "atest"], axes.flat):
-        ax.set_title(title)
-        #lrcolordict = dict((lr, 'C'+str(i)) for (i,lr) in enumerate(['0.0010', '0.0050', '0.0500', '0.0100', '0.1000', '0.0250']))
-        #lrcolordict['mLR'] = 'k'
+    for title, ax in zip(["ltrain","ltest"], axes.flat):
+        titledict = {'a': "Accuracy", 'l': "Loss"}
+        ax.set_title(titledict[title[0]] + ' ' + title[1:])
+
+        
         for exp in sorted(explist, key=lambda d: d['lr']):
             if exp['alrao']:
                 label = 'alrao'
                 c = 'K'
+                #c = None
                 alpha=1.
-                linestyle='-'
+                linestyle='--'
                 linewidth=1.
             else:
                 label='lr={:.0e}'.format(exp['lr'])
-                c = None
+                c = cm.to_rgba(np.log(exp['lr']))
                 alpha=.1
                 linestyle='-'
                 linewidth=1.
@@ -162,19 +203,39 @@ def plot_learning_curves(explist, namefile='learningcurves.eps'):
                 std.append(metep.std())
 
 
-            ax.errorbar(list(range(len(mean[minidx:maxidx]))), mean[minidx:maxidx], yerr=std[minidx:maxidx],  label=label, c=c, alpha=alpha, linestyle=linestyle, linewidth=linewidth)
-            #ax.plot(mean[minidx:maxidx], label=label, c=c, alpha=alpha, linestyle=linestyle, linewidth=linewidth)
-
+            #ax.errorbar(list(range(len(mean[minidx:maxidx]))), mean[minidx:maxidx], yerr=std[minidx:maxidx],  label=label, c=c, alpha=alpha, linestyle=linestyle, linewidth=linewidth)
+            ax.plot(mean[minidx:maxidx], label=label, c=c, alpha=alpha, linestyle=linestyle, linewidth=linewidth)
+            
         if title[0] == 'l':
-            ax.set_ylim(0., 3.)
+            ax.set_ylim(0., 2.4)
+            ax.set_ylabel("loss")
         else:
             ax.set_ylim(0., 1.)
-        ax.legend()
-        plt.tight_layout()
-        plt.savefig(namefile, format="eps")
+            ax.set_ylabel("accuracy")
+        ax.set_xlim(minidx, maxidx)
+        ax.set_xlabel("epochs")
+
+        if "train" in title:
+            ax.legend(loc='upper right')
+    plt.tight_layout()
+    plt.savefig(namefile, format="eps")
 
 
 
 explist = load_data_files('FinalResults/')
+explist = [exp for exp in explist if exp["modelname"] != "SENet18"]
+#explist = load_data_files('./')
 results(explist)
-plot_learning_curves(explist)
+
+
+modelnameslist = set(exp["modelname"] for exp in explist)
+opt = ["SGD", "Adam"]
+
+for modelname, opt in product(modelnameslist, opt):
+    subexplist = [exp for exp in explist if exp["modelname"] == modelname and exp["opt"] == opt]
+    if len(subexplist) == 0:
+        continue
+    plot_learning_curves(subexplist, namefile='learningcurves_{}_{}.eps'.format(modelname, opt))
+
+#print("Len explist: {}".format(len(explist)))
+
