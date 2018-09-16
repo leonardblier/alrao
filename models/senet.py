@@ -52,12 +52,11 @@ class PreActBlock(nn.Module):
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
 
-        self.mybn = nn.BatchNorm2d(planes)
+        #self.mybn = nn.BatchNorm2d(planes)
         
         if stride != 1 or in_planes != planes:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_planes, planes, kernel_size=1, stride=stride, bias=False),
-                self.mybn
             )
 
         # SE layers
@@ -78,8 +77,8 @@ class PreActBlock(nn.Module):
         out = out * w
 
         out += shortcut
-        #return out
-        return self.mybn(out)
+        return out
+        #return self.mybn(out)
 
 
 class SENet(nn.Module):
