@@ -167,7 +167,7 @@ def train(epoch):
     total_pred = 0
     start_time = time.time()
     ntokens = len(corpus.dictionary)
-    current, hidden = net.preclassifier.init_hidden(args.batch_size)
+    current, hidden = net.preclassifier.init_hidden(batch_size)
     for batch_idx, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
         nb_it += 1
         data, targets = get_batch(train_data, i)
