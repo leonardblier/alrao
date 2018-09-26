@@ -322,10 +322,18 @@ def plot_learning_curves(explist, namefile='learningcurves.eps'):
         ax.set_title(titledict[title[0]] + ' ' + title[1:])
 
 
-        for exp in sorted(explist, key=lambda d: d['lr']):
+        for exp in sorted(explist, key=lambda d: (d["opt"], d['lr'])):
             if exp['alrao']:
                 label = 'alrao'.format(exp["minlr"], exp["maxlr"])
                 c = 'K'
+                # c = None
+                alpha=1.
+                linestyle='--'
+                # linestyle='-'
+                linewidth=1.
+            elif exp["opt"] == 'Adam':
+                label = 'Adam default'
+                c = 'r'
                 # c = None
                 alpha=1.
                 linestyle='--'
@@ -387,8 +395,8 @@ explist = [exp for exp in explist if exp["modelname"] != "SENet18"]
 results(explist, latex=False)
 
 # subexplist = [exp for exp in explist if exp["modelname"] == "VGG19" and exp["opt"] == "Adam" and exp["alrao"]]
-subexplist = [exp for exp in explist if exp["modelname"] == "GoogLeNet" and exp["opt"] == "Adam"]
-plot_learning_curves(subexplist, namefile='adamalraogoogle.eps')
+subexplist = [exp for exp in explist if exp["modelname"] == "MobileNetV2" and (exp["opt"] == "SGD" or (not exp["alrao"] and exp["lr"] == 1.e-3))]
+plot_learning_curves(subexplist, namefile='totalmobile.eps')
 
 
 

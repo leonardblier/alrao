@@ -1,3 +1,4 @@
+
 import sys
 import subprocess
 from sbatch import launch_exp
@@ -104,7 +105,7 @@ argsDict['size_multiplier'] = 1
 #         launch_exp(runOpt, sbatchOpt, argsDict)
 
 i = 0
-for model_name in ["GoogLeNet", "MobileNetV2", "VGG19"]:
+for model_name in ["MobileNetV2"]:
 
     argsDict['model_name'] = model_name
     #
@@ -140,14 +141,14 @@ for model_name in ["GoogLeNet", "MobileNetV2", "VGG19"]:
     MINI, MAXI = -5, 1
     # lr_list = [10 ** k for k in range(MINI, MAXI + 1)]
     #lr_list = [10 ** k for k in [-3, -2, -1, 0, 1]]
-    lr_list = [1.e-3]
+    lr_list = [1.e-4, 1e-5, 1e-6]
     minmaxlr = [(MINI, MAXI)]
     # minmaxlr = [(mini, maxi) for mini in range(-7,-1) for maxi in range(-3, 3) if mini < maxi]
 
     #minmaxlr = [(mini, maxi) for mini in range(-7,-1) for maxi in range(-7, -3) if mini < maxi]
     #minmaxlr += [(mini, maxi) for mini in range(-1,3) for maxi in range(-3, 3) if mini < maxi]
     #minmaxlr = [(-5, 1)]
-    for i in range(1):
+    for i in range(5):
         argsDict['exp_number'] = i
         argsDict['use_switch'] = False
 
@@ -155,10 +156,10 @@ for model_name in ["GoogLeNet", "MobileNetV2", "VGG19"]:
             argsDict['lr'] = lr
             launch_exp(runOpt, sbatchOpt, argsDict)
 
-    for i in range(1):
-        argsDict['exp_number'] = i
-        argsDict['use_switch'] = True
-        for (minLR, maxLR) in minmaxlr:
-            argsDict['minLR'] = minLR
-            argsDict['maxLR'] = maxLR
-            launch_exp(runOpt, sbatchOpt, argsDict)
+    # for i in range(1):
+    #     argsDict['exp_number'] = i
+    #     argsDict['use_switch'] = True
+    #     for (minLR, maxLR) in minmaxlr:
+    #         argsDict['minLR'] = minLR
+    #         argsDict['maxLR'] = maxLR
+    #         launch_exp(runOpt, sbatchOpt, argsDict)
