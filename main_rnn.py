@@ -51,7 +51,7 @@ device = torch.device("cuda" if use_cuda else "cpu")
 best_acc = 0  # best test accuracy
 
 batch_size = args.rnn_batch_size
-corpus = data_text.Corpus(args.data, raw = False, ignore_unique = True)
+corpus = data_text.Corpus(args.rnn_data_path, raw = False, ignore_unique = True)
 
 def batchify(data, bsz):
     # Work out how cleanly we can divide the dataset into bsz parts.
@@ -63,7 +63,7 @@ def batchify(data, bsz):
     return data.to(device)
 
 eval_batch_size = 10
-train_data = batchify(corpus.train, args.batch_size)
+train_data = batchify(corpus.train, batch_size)
 valid_data = batchify(corpus.valid, eval_batch_size)
 test_data = batchify(corpus.test, eval_batch_size)
 
@@ -96,10 +96,10 @@ maxlr = 10 ** args.maxLR
 ntokens = len(corpus.dictionary)
 print('Number of tokens: ' + repr(ntokens))
 
-preclassifier = RNNModel(args.rnn_type, ntoken, args.rnn_emsize, args.rnn_nhid,
+preclassifier = RNNModel(args.rnn_type, ntokens, args.rnn_emsize, args.rnn_nhid,
                          args.rnn_nlayers, args.dropOut).to(device)
 if args.use_switch:
-    net = AlraoModel(preclassifier, args.nb_class, LinearClassifierRNN, args.nhid, ntokens)
+    net = AlraoModel(preclassifier, args.nb_class, LinearClassifierRNN, args.rnn_nhid, ntokens)
     total_param = sum(np.prod(p.size()) for p in net.parameters_preclassifier())
     total_param += sum(np.prod(p.size()) \
                        for lcparams in net.classifiers_parameters_list() \

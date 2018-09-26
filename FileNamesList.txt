@@ -2811,3 +2811,10 @@ da_SENet18_lr-1.0e-06_mLR-m6m1_sw-10_Adam_K1_es_exp-0_testlr
 da_SENet18_lr-1.0e-01_mLR-m6m1_sw-10_Adam_K1_es_exp-0_testlr
 da_GoogLeNet_lr-1.0e-06_mLR-m6m1_sw-10_Adam_K1_es_exp-0_testlr
 da_GoogLeNet_lr-1.0e-01_mLR-m6m1_sw-10_Adam_K1_es_exp-0_testlr
+VGG16_do-0.200_lr-1.0e-03_mLR-m3p2_sw-6_SGD_K1_es_test
+VGG16_do-0.200_lr-1.0e-03_mLR-m3p2_sw-6_SGD_K1_es_test
+VGG16_do-0.200_lr-1.0e-03_mLR-m3p2_sw-6_SGD_K1_es_test
+VGG16_do-0.200_lr-1.0e-03_mLR-m3p2_sw-6_SGD_K1_es_test
+VGG16_do-0.200_lr-1.0e-03_mLR-m3p2_sw-6_SGD_K1_es_test
+VGG16_do-0.200_lr-1.0e-03_mLR-m3p2_sw-6_SGD_K1_es_test
+VGG16_do-0.200_lr-1.0e-03_mLR-m3p2_sw-6_SGD_K1_es_test

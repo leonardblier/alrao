@@ -4,25 +4,26 @@ from sbatch import launch_exp
 
 # Options
 py_file_name = 'pytorch_cifar.py'
+interactive = True
 
 if not interactive:
-    runOpt = {'env_name': 'test', # name of the environment to be activated
+    runOpt = {'env_name': 'pytorch', # name of the environment to be activated
               'use_slurm': True, # if True, read the slurm options
               'interactive': False, # must be True if you run an interactive job
               # if use_slurm is True and interactive is False,
               #     run the script with sbatch
               'command': 'python', # 'python', 'ipython -i'
-              'script': 'main.py',
+              'script': 'main_rnn.py',
               'temp_file': 'temp_run.sh',
               'keep_temp_file': False}
 else:
-   runOpt = {'env_name': 'test', # name of the environment to be activated
+   runOpt = {'env_name': 'pytorch', # name of the environment to be activated
               'use_slurm': True, # if True, read the slurm options
               'interactive': True, # must be True if you run an interactive job
               # if use_slurm is True and interactive is False,
               #     run the script with sbatch
               'command': 'ipython -i',
-              'script': 'main.py',
+              'script': 'main_rnn.py',
               'temp_file': 'temp_run.sh',
               'keep_temp_file': True}
 
@@ -47,7 +48,7 @@ argsDict = {'epochs': 10,
             'maxLR': 2,
             'lr': .001,
             'momentum': 0,
-            'clip': .25,
+            'rnn_clip': .25,
 
             'suffix': 'test'}
 
