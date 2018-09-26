@@ -54,6 +54,26 @@ def parseArgs(parser = None):
     parser.add_argument('--size_multiplier', type = int, default = 1, \
                         help = 'multiplier of the number of neurons per layer (default: 1)')
 
+    # RNN options
+    parser.add_argument('--rnn_type', default='LSTM', \
+                        help = 'Model {LSTM, GRU}')
+    parser.add_argument('--rnn_data_path', type=str, default='./wikitext-2-raw',
+                        help='location of the data corpus')
+    parser.add_argument('--rnn_emsize', type=int, default=200,
+                        help='size of word embeddings')
+    parser.add_argument('--rnn_nhid', type=int, default=200,
+                        help='number of hidden units per layer')
+    parser.add_argument('--rnn_nlayers', type=int, default=2,
+                        help='number of layers')
+    parser.add_argument('--rnn_clip', type=float, default=0.25,
+                        help='gradient clipping')
+    parser.add_argument('--rnn_batch_size', type=int, default=20, metavar='N',
+                        help='batch size')
+    parser.add_argument('--rnn_bptt', type=int, default=35,
+                        help='sequence length')
+    parser.add_argument('--rnn_char_prediction', action = 'store_true', default = False, \
+                        help = 'Task: character prediction')
+
     # print options
     parser.add_argument('--print_period', type = int, default = 10, \
                         help = 'sort period (default: 10)')
