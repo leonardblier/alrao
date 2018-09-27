@@ -11,6 +11,7 @@ from torch.autograd import Variable
 from torch.utils import data
 
 import os
+import sys
 import argparse
 import time
 from tqdm import tqdm
@@ -147,7 +148,7 @@ else:
         optimizer = optim.Adam(net.parameters(), lr=base_lr)
 
 def get_batch(source, i):
-    seq_len = min(args.bptt, len(source) - 1 - i)
+    seq_len = min(args.rnn_bptt, len(source) - 1 - i)
     data = source[i:i+seq_len]
     target = source[i+1:i+1+seq_len].view(-1)
     return data, target
@@ -168,9 +169,10 @@ def train(epoch):
     start_time = time.time()
     ntokens = len(corpus.dictionary)
     current, hidden = net.preclassifier.init_hidden(batch_size)
-    for batch_idx, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+    for batch_idx, i in enumerate(range(0, train_data.size(0) - 1, args.rnn_bptt)):
         nb_it += 1
         data, targets = get_batch(train_data, i)
+        data, targets = data.cuda(), targets.cuda()
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
         hidden.detach_()
@@ -186,20 +188,22 @@ def train(epoch):
             for classifier in net.classifiers():
                 loss_classifier = criterion(classifier(newx), targets)
                 loss_classifier.backward()
+                """
                 from math import isnan
-                if any(np.any(np.isnan(p.grad.data)) for p in classifier.parameters()):
+                if np.any(np.isnan(p.grad.data.sum()) for p in classifier.parameters()):
                     print("loss classifier:{:.5f}".format(loss_classifier.data[0]))
                     split_loss = nn.NLLLoss(reduce=False)(classifier(newx), targets)
                     maxloss = split_loss.max()
                     maxloss.backward()
-                    stop
+                    sys.exit()
+                """
 
         _, predicted = torch.max(output.data, 1)
         total_pred += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum().item()
 
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        torch.nn.utils.clip_grad_norm_(net.preclassifier.parameters(), args.clip)
+        torch.nn.utils.clip_grad_norm_(net.preclassifier.parameters(), args.rnn_clip)
         optimizer.step()
 
         #if args.use_switch:
@@ -217,7 +221,7 @@ def train(epoch):
             elapsed = time.time() - start_time
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, batch_idx, len(train_data) // args.bptt, lr,
+                epoch, batch_idx, len(train_data) // args.rnn_bptt, args.lr,
                 elapsed * 1000 / log_interval, cur_loss, math.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()
@@ -240,11 +244,11 @@ def test(epoch, loader):
     correct = 0
     total_pred = 0
     ntokens = len(corpus.dictionary)
-    hidden, current = init_hidden(eval_batch_size)
+    hidden, current = net.preclassifier.init_hidden(eval_batch_size)
     with torch.no_grad():
-        for i in range(0, loader.size(0) - 1, args.bptt):
+        for i in range(0, loader.size(0) - 1, args.rnn_bptt):
             data, targets = get_batch(loader, i)
-            if args.use_cuda:
+            if use_cuda:
                 data, targets = data.cuda(), targets.cuda()
             output, hidden, current = net(data, hidden, current)
             total_loss += len(data) * criterion(output, targets).item()

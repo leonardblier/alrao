@@ -22,7 +22,7 @@ else:
               'interactive': True, # must be True if you run an interactive job
               # if use_slurm is True and interactive is False,
               #     run the script with sbatch
-              'command': 'ipython -i',
+              'command': 'python',
               'script': 'main_rnn.py',
               'temp_file': 'temp_run.sh',
               'keep_temp_file': True}

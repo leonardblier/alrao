@@ -34,7 +34,7 @@ class RNNModel(nn.Module):
 
     def forward(self, input, hidden, current):
         emb = self.drop(self.encoder(input))
-        output, (new_hidden, new_current) = self.rnn(emb, (hidden, surrent))
+        output, (new_hidden, new_current) = self.rnn(emb, (hidden, current))
         output = self.drop(output)
         return output, hidden, current
 
