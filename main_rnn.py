@@ -52,7 +52,7 @@ device = torch.device("cuda" if use_cuda else "cpu")
 best_acc = 0  # best test accuracy
 
 batch_size = args.rnn_batch_size
-corpus = data_text.Corpus(args.rnn_data_path, raw = False, ignore_unique = True)
+corpus = data_text.Corpus(args.rnn_data_path, char_prediction = args.rnn_char_prediction)
 
 def batchify(data, bsz):
     # Work out how cleanly we can divide the dataset into bsz parts.
