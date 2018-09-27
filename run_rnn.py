@@ -40,6 +40,7 @@ argsDict = {'epochs': 10,
             'rnn_nhid': 100,
             'rnn_batch_size': 20,
             'rnn_bptt': 70,
+            'rnn_char_prediction': True,
 
             'use_switch': True,
             'nb_class': 6,
