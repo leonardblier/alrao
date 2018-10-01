@@ -118,24 +118,14 @@ class LinearClassifier(nn.Module):
         return x
 
 class LinearClassifierRNN(nn.Module):
-    def __init__(self, nhid, ntoken, tie_weights = False, encoder = None, ninp = -1):
+    def __init__(self, nhid, ntoken):
         super(LinearClassifierRNN, self).__init__()
         self.decoder = nn.Linear(nhid, ntoken)
+        self.nhid = nhid
         self.ntoken = ntoken
 
-        # Optionally tie weights as in:
-        # "Using the Output Embedding to Improve Language Models" (Press & Wolf 2016)
-        # https://arxiv.org/abs/1608.05859
-        # and
-        # "Tying Word Vectors and Word Classifiers: A Loss Framework for Language Modeling" (Inan et al. 2016)
-        # https://arxiv.org/abs/1611.01462
-        if tie_weights:
-            if nhid != ninp:
-                raise ValueError('When using the tied flag, nhid must be equal to emsize')
-            self.decoder.weight = encoder.weight
-
     def init_weights(self):
-        initrange = 0.1
+        initrange = .1
         self.decoder.bias.data.zero_()
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
