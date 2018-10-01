@@ -13,6 +13,7 @@ class AlraoModel(nn.Module):
         nclassifiers: number of classifiers to use with the model averaging method
         nclasses: number of classes in the classification task
         classifier_gen: python class to use to construct the classifiers
+        *args, **kwargs: arguments to be passed to the constructor of 'classifier_gen'
     """
     def __init__(self, preclassifier, nclassifiers, classifier_gen, *args, **kwargs):
         super(AlraoModel, self).__init__()
@@ -25,6 +26,25 @@ class AlraoModel(nn.Module):
             setattr(self, "classifier" + str(i), classifier)
 
     def method_fwd_preclassifier(self, method_name_src, method_name_dst = None):
+        r"""
+        Allows the user to call directly a method of the pre-classifier.
+
+        Creates a new method for the called instance of AlraoModel named 'method_name_dst'.
+        Calling this method is exactly equivalent to calling the method of 'self.preclassifier' named 'method_name_src'.
+        If 'method_name_dst' is left to 'None', 'method_name_dst' is set to 'method_name_src'.
+
+        Example:
+            am = AlraoModel(precl, ncl, cl_gen)
+            am.method_fwd_preclassifier('some_method')
+            # call 'some_method' by the usual way
+            am.preclassifier.some_method(some_args)
+            # call 'some_method' using forwarding
+            am.some_method(som_args)
+
+        Arguments:
+            method_name_src: name of the method of the pre-classifier to bind
+            method_name_dst: name of the method to call
+        """
         if method_name_dst is None:
             method_name_dst = method_name_src
         assert getattr(self, method_name_dst, None) is None, \
@@ -37,12 +57,33 @@ class AlraoModel(nn.Module):
         setattr(self, f.__name__, f)
 
     def method_fwd_classifiers(self, method_name_src, method_name_dst = None):
+        r"""
+        Allows the user to call directly a method of the classifiers.
+
+        Creates a new method for the called instance of AlraoModel named 'method_name_dst'.
+        Calling this method is exactly equivalent to calling the method of the classifiers named 'method_name_src'
+            on each classifier.
+        If 'method_name_dst' is left to 'None', 'method_name_dst' is set to 'method_name_src'.
+
+        Example:
+            am = AlraoModel(precl, ncl, cl_gen)
+            am.method_fwd_classifiers('some_method')
+            # call 'some_method' by the usual way
+            for cl in am.classifiers():
+                cl.some_method(some_args)
+            # call 'some_method' using forwarding
+            am.some_method(som_args)
+
+        Arguments:
+            method_name_src: name of the method of the classifiers to bind
+            method_name_dst: name of the method to call
+        """
         if method_name_dst is None:
             method_name_dst = method_name_src
         assert getattr(self, method_name_src, None) is None, \
             'The method {} cannot be forwarded: an attribute with the same name already exists.'.format(method_name_dst)
         lst_methods = [getattr(cl, method_name_src) for cl in self.classifiers()]
-        
+
 
         def f(*args, **kwargs):
             return [method(*args, **kwargs) for method in lst_methods]
@@ -58,21 +99,26 @@ class AlraoModel(nn.Module):
 
     def forward(self, *args, **kwargs):
         r"""
-        input x -> x = self.preclassifier(x)
-        either 'x' is a scalar or a tuple:
+        Gives an input to the pre-classifier, then gives its output to each classifier,
+            averages their output with 'switch', a model averaging method.
+
+        The output 'x' of the pre-classifier is either a scalar or a tuple:
             - 'x' is a scalar: 'x' is used as input of each classifier
             - 'x' is a tuple: 'x[0]' is used as input of each classifier
+
+        Arguments:
+            *args, **kwargs: arguments to be passed to the forward method of the pre classifier
         """
         x = self.preclassifier(*args, **kwargs)
 
         z = x
         if isinstance(z, tuple):
             z = x[0]
-        
+
         lst_logpx = [cl(z) for cl in self.classifiers()]
         self.last_x, self.last_lst_logpx = z, lst_logpx
         out = self.switch.forward(lst_logpx)
-        
+
         if isinstance(x, tuple):
             out = (out,) + x[1:]
         return out
@@ -143,4 +189,3 @@ class AlraoModel(nn.Module):
         for (i, c) in enumerate(self.classifiers()):
             print("Classifier {}: {:.0e}".format(i,
                 sum(float(p.norm()) for p in c.parameters())))
-
