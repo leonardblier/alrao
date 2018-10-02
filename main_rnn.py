@@ -13,12 +13,12 @@ from tqdm import tqdm
 import numpy as np
 
 from models import RNNModel
-from mymodels import LinearClassifierRNN
-from optim_spec import SGDAlrao, AdamAlrao
-from learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
+from alrao import AlraoModel
+from alrao import LinearClassifierRNN
+from alrao import SGDAlrao, AdamAlrao
+from alrao import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
+from alrao.earlystopping import EarlyStopping
 
-from earlystopping import EarlyStopping
-from alrao_model import AlraoModel
 import data_text
 
 
