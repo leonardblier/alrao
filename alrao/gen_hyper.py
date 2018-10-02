@@ -1,10 +1,22 @@
-import os
 import random
-import torch
-import torch.nn as nn
 
 # Learning rate
+"""
+This files implements four different ways to choose learning rates for a tensor.
+Each of the following functions build a function which for each tensor t returns a tensor ret
+which has the same size than t, and corresponds to its learning rates.
+
+"""
+
 def fdet_lr_log(minLR, maxLR):
+    """
+    Build a function which compute for each tensor t a tensor of learning rate deterministically,
+    by spreading log-uniformly the learning rates over the interval (minLR, maxLR)
+    Arguments:
+        minLR, maxLR: Define the interval on which the learning rates are spread
+    Returns:
+        ret: a function which build a tensor of learning rate for each tensor t
+    """
     M_minLR = minLR
     M_dstLR = maxLR - minLR
 
@@ -21,6 +33,14 @@ def fdet_lr_log(minLR, maxLR):
     return f
 
 def fdet_lr_unif(lr):
+    """
+    Build a function which compute for each tensor t a tensor of learning rate, by setting
+    all the values to lr.
+    Arguments:
+        lr: The value of the learning rate
+    Returns:
+        ret: a function which build a tensor of learning rate for each tensor t
+    """
     M_lr = lr
 
     def f(t):
@@ -31,12 +51,19 @@ def fdet_lr_unif(lr):
 
 # frand_lr_log: TODO
 def frand_lr_log(minLR, maxLR):
+    """
+    Build a function which compute for each tensor t a tensor of learning rate randomly
+    with the log-uniform distribution over the interval (minLR, maxLR)
+    Arguments:
+        minLR, maxLR: Define the interval on which the learning rates are sampled.
+    Returns:
+        ret: a function which build a tensor of learning rate for each tensor t
+    """
     M_minLR = minLR
     M_maxLR = maxLR
 
     def f(t):
         rd = random.uniform(M_minLR, M_maxLR)
-        #includes.outputText('log10(lr) = ' + repr(rd + math.log10(args.lr)))
         ret = t.new().resize_as_(t).fill_(pow(10, rd))
         return ret
 
