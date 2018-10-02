@@ -1,58 +1,96 @@
 '''Train PTB with PyTorch.'''
 from __future__ import print_function
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
-import torch.backends.cudnn as cudnn
-from torch.autograd import Variable
-from torch.utils import data
 
 import os
-import sys
 import argparse
 import time
 from tqdm import tqdm
 import numpy as np
 
-from models import *
+from models import RNNModel
 from mymodels import LinearClassifierRNN
-from switch import Switch
-from optim_spec import SGDSwitch, SGDSpec, AdamSpec, AdamSwitch
+from optim_spec import SGDAlrao, AdamAlrao
 from learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
 
 from earlystopping import EarlyStopping
 from alrao_model import AlraoModel
 import data_text
-# TO BE REMOVED
-from utils import Subset
-from input import parseArgs
-from output import OutputManager
 
 
-import pdb
+parser = argparse.ArgumentParser(description='alrao')
 
-from utils import *
+# CUDA
+parser.add_argument('--no-cuda', action='store_true', default=False,
+                    help='disable cuda')
 
-#torch.manual_seed(123)
+# epochs
+parser.add_argument('--epochs', type=int, default=50,
+                    help='number of epochs for phase 1 (default: 50)')
+parser.add_argument('--early_stopping', action='store_true', default=False,
+                    help='use early stopping')
 
-args = parseArgs()
+# options
+parser.add_argument('--drop_out', type=float, default=.2,
+                    help='drop-out rate')
+parser.add_argument('--optimizer', default='SGD',
+                    help='optimizer (default: SGD) {Adam, SGD}')
+parser.add_argument('--lr', type=float, default=.01,
+                    help='learning rate, when used without alrao')
+parser.add_argument('--momentum', type=float, default=0.,
+                    help='momentum')
+parser.add_argument('--weight_decay', type=float, default=0.,
+                    help='l2 penalty')
 
-outputManager = OutputManager(args)
+# RNN
+parser.add_argument('--data_path', type=str, default='./ptb',
+                    help='location of the data corpus')
+parser.add_argument('--emsize', type=int, default=100,
+                    help='size of word embeddings')
+parser.add_argument('--nhid', type=int, default=100,
+                    help='number of hidden units per layer')
+parser.add_argument('--nlayers', type=int, default=2,
+                    help='number of layers')
+parser.add_argument('--clip', type=float, default=.25,
+                    help='gradient clipping')
+parser.add_argument('--batch_size', type=int, default=20,
+                    help='batch size')
+parser.add_argument('--bptt', type=int, default=35,
+                    help='sequence length')
+parser.add_argument('--char_prediction', action = 'store_true', default = False,
+                    help = 'task: character prediction')
+
+# Alrao Parameters
+parser.add_argument('--use_alrao', action='store_true', default=True,
+                    help='multiple learning rates')
+parser.add_argument('--minlr', type=int, default=.001,
+                    help='minimum LR in alrao (eta_min)')
+parser.add_argument('--maxlr', type=int, default=100.,
+                    help='maximum LR in alrao (eta_max)')
+parser.add_argument('--nb_class', type=int, default=6,
+                    help='number of classifiers before the switch')
+
+args = parser.parse_args()
 
 if args.no_cuda or not torch.cuda.is_available():
     use_cuda = False
 else:
     use_cuda = True
-
 device = torch.device("cuda" if use_cuda else "cpu")
 
-best_acc = 0  # best test accuracy
+model_name = 'LSTM'
 
-batch_size = args.rnn_batch_size
-corpus = data_text.Corpus(args.rnn_data_path, char_prediction = args.rnn_char_prediction)
+# Build dataset
+batch_size = args.batch_size
+eval_batch_size = 10
+
+corpus = data_text.Corpus(args.data_path, char_prediction = args.char_prediction)
+ntokens = len(corpus.dictionary)
+print('Number of tokens: ' + repr(ntokens))
 
 def batchify(data, bsz):
     # Work out how cleanly we can divide the dataset into bsz parts.
@@ -63,44 +101,25 @@ def batchify(data, bsz):
     data = data.view(bsz, -1).t().contiguous()
     return data.to(device)
 
-eval_batch_size = 10
 train_data = batchify(corpus.train, batch_size)
 valid_data = batchify(corpus.valid, eval_batch_size)
 test_data = batchify(corpus.test, eval_batch_size)
 
+# Build model
 class StandardModel(nn.Module):
     def __init__(self, preclassifier, classifier, *args, **kwargs):
         super(StandardModel, self).__init__()
         self.preclassifier = preclassifier
-        self.classifier = classifier(*args, **kwargs).to(device)
+        self.classifier = classifier(*args, **kwargs) #.to(device)
 
     def forward(self, x):
         x = self.preclassifier(x)
         return self.classifier(x)
 
-"""
-class StandardModel(nn.Module):
-    def __init__(self, preclassifier, K=1):
-        super(StandardModel, self).__init__()
-        self.preclassifier = preclassifier
-        self.classifier = LinearClassifier(self.preclassifier.linearinputdim, 10)
-
-    def forward(self, x):
-        x = self.preclassifier(x)
-        return self.classifier(x)
-"""
-
-base_lr = args.lr
-minlr = 10 ** args.minLR
-maxlr = 10 ** args.maxLR
-
-ntokens = len(corpus.dictionary)
-print('Number of tokens: ' + repr(ntokens))
-
-preclassifier = RNNModel(args.rnn_type, ntokens, args.rnn_emsize, args.rnn_nhid,
-                         args.rnn_nlayers, args.dropOut).to(device)
-if args.use_switch:
-    net = AlraoModel(preclassifier, args.nb_class, LinearClassifierRNN, args.rnn_nhid, ntokens)
+preclassifier = RNNModel(model_name, ntokens, args.emsize, args.nhid,
+                         args.nlayers, args.drop_out) #.to(device)
+if args.use_alrao:
+    net = AlraoModel(preclassifier, args.nb_class, LinearClassifierRNN, args.nhid, ntokens)
     total_param = sum(np.prod(p.size()) for p in net.parameters_preclassifier())
     total_param += sum(np.prod(p.size()) \
                        for lcparams in net.classifiers_parameters_list() \
@@ -116,7 +135,13 @@ if use_cuda:
 
 criterion = nn.NLLLoss()
 
-if args.use_switch:
+# Build optimizer
+base_lr = args.lr
+minlr = args.minlr
+maxlr = args.maxlr
+
+if args.use_alrao:
+    # Build the learning rates for each classifier
     if args.nb_class > 1:
         classifiers_lr = [np.exp(\
                 np.log(minlr) + k /(args.nb_class-1) * (np.log(maxlr) - np.log(minlr)) \
@@ -125,22 +150,22 @@ if args.use_switch:
     else:
         classifiers_lr = [minlr]
 
+    # Build the learning rates for the pre-classifier
     lr_sampler = lr_sampler_generic(minlr, maxlr)
     lr_preclassifier = generator_randomlr_neurons(net.preclassifier, lr_sampler)
 
     if args.optimizer == 'SGD':
-        optimizer = SGDSwitch(net.parameters_preclassifier(),
+        optimizer = SGDAlrao(net.parameters_preclassifier(),
                               lr_preclassifier,
                               net.classifiers_parameters_list(),
                               classifiers_lr,
                               momentum=args.momentum,
                               weight_decay=args.weight_decay)
     elif args.optimizer == 'Adam':
-        optimizer = AdamSwitch(net.parameters_preclassifier(),
+        optimizer = AdamAlrao(net.parameters_preclassifier(),
                                lr_preclassifier,
                                net.classifiers_parameters_list(),
                                classifiers_lr)
-
 else:
     if args.optimizer == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr=base_lr)
@@ -148,7 +173,7 @@ else:
         optimizer = optim.Adam(net.parameters(), lr=base_lr)
 
 def get_batch(source, i):
-    seq_len = min(args.rnn_bptt, len(source) - 1 - i)
+    seq_len = min(args.bptt, len(source) - 1 - i)
     data = source[i:i+seq_len]
     target = source[i+1:i+1+seq_len].view(-1)
     return data, target
@@ -156,25 +181,25 @@ def get_batch(source, i):
 # Training
 log_interval = 200
 def train(epoch):
-    # Turn on training mode which enables dropout.
     net.train()
-    if args.use_switch:
+    if args.use_alrao:
         optimizer.update_posterior(net.posterior())
         net.switch.reset_cl_perf()
     total_loss = 0.
     epoch_loss = 0.
-    nb_it = 0
     correct = 0
     total_pred = 0
     start_time = time.time()
-    ntokens = len(corpus.dictionary)
     current, hidden = net.preclassifier.init_hidden(batch_size)
-    for batch_idx, i in enumerate(range(0, train_data.size(0) - 1, args.rnn_bptt)):
-        nb_it += 1
+
+    pbar = tqdm(total = train_data.size(0),
+                bar_format = '{l_bar}{bar}| {n_fmt}/{total_fmt} {postfix}')
+    pbar.set_description("Epoch %d" % epoch)
+
+    for batch_idx, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
         data, targets = get_batch(train_data, i)
         data, targets = data.cuda(), targets.cuda()
-        # Starting each batch, we detach the hidden state from how it was previously produced.
-        # If we didn't, the model would try backpropagating all the way to start of the dataset.
+
         hidden.detach_()
         current.detach_()
         net.zero_grad()
@@ -182,63 +207,44 @@ def train(epoch):
         loss = criterion(output, targets)
         loss.backward()
 
-        if args.use_switch:
+        if args.use_alrao:
             optimizer.classifiers_zero_grad()
             newx = net.last_x.detach()
             for classifier in net.classifiers():
                 loss_classifier = criterion(classifier(newx), targets)
                 loss_classifier.backward()
-                """
-                from math import isnan
-                if np.any(np.isnan(p.grad.data.sum()) for p in classifier.parameters()):
-                    print("loss classifier:{:.5f}".format(loss_classifier.data[0]))
-                    split_loss = nn.NLLLoss(reduce=False)(classifier(newx), targets)
-                    maxloss = split_loss.max()
-                    maxloss.backward()
-                    sys.exit()
-                """
+
+        torch.nn.utils.clip_grad_norm_(net.preclassifier.parameters(), args.clip)
+        optimizer.step()
 
         _, predicted = torch.max(output.data, 1)
         total_pred += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum().item()
 
-        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        torch.nn.utils.clip_grad_norm_(net.preclassifier.parameters(), args.rnn_clip)
-        optimizer.step()
-
-        #if args.use_switch:
-        #    postfix["PostSw"] = net.repr_posterior()
-
         total_loss += loss.item()
         epoch_loss += loss.item()
 
-        if args.use_switch:
+        pbar.update(args.bptt)
+        postfix = OrderedDict([("LossTrain", "{:.4f}".format(total_loss/(batch_idx+1))),
+                               ("AccTrain", "{:.3f}".format(100.*correct/total_pred))])
+
+        pbar.set_postfix(postfix)
+
+        if args.use_alrao:
             net.update_switch(targets, catch_up=batch_idx % 20 == 0)
             optimizer.update_posterior(net.posterior())
 
-        if batch_idx % log_interval == 0 and batch_idx > 0:
-            cur_loss = total_loss / log_interval
-            elapsed = time.time() - start_time
-            print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
-                    'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, batch_idx, len(train_data) // args.rnn_bptt, args.lr,
-                elapsed * 1000 / log_interval, cur_loss, math.exp(cur_loss)))
-            total_loss = 0
-            start_time = time.time()
-
-    if args.use_switch:
+    if args.use_alrao:
         cl_perf = net.switch.get_cl_perf()
         for k in range(len(cl_perf)):
             print("Classifier {}\t LossTrain:{:.6f}\tAccTrain:{:.4f}".format(
                 k, cl_perf[k][0], cl_perf[k][1]))
 
-    return epoch_loss / nb_it, correct / total_pred
+    return epoch_loss / (batch_idx + 1), correct / total_pred
 
 def test(epoch, loader):
-    global best_acc
-    # Turn on evaluation mode which disables dropout.
     net.eval()
-    if args.use_switch:
+    if args.use_alrao:
         net.switch.reset_cl_perf()
     total_loss = 0.
     correct = 0
@@ -246,7 +252,7 @@ def test(epoch, loader):
     ntokens = len(corpus.dictionary)
     hidden, current = net.preclassifier.init_hidden(eval_batch_size)
     with torch.no_grad():
-        for i in range(0, loader.size(0) - 1, args.rnn_bptt):
+        for i in range(0, loader.size(0) - 1, args.bptt):
             data, targets = get_batch(loader, i)
             if use_cuda:
                 data, targets = data.cuda(), targets.cuda()
@@ -258,7 +264,7 @@ def test(epoch, loader):
             correct += predicted.eq(targets.data).cpu().sum().item()
 
     print('\tLossTest: %.4f\tAccTest: %.3f' % (total_loss / len(loader), 100. * correct / total_pred))
-    if args.use_switch:
+    if args.use_alrao:
         print(("Posterior : "+"{:.1e}, " * args.nb_class).format(*net.posterior()))
 
     return total_loss / len(loader), correct / total_pred
@@ -274,10 +280,6 @@ for epoch in range(args.epochs):
     valid_nll, valid_acc = test(epoch, valid_data)
     print('Test')
     test_nll, test_acc = test(epoch, test_data)
-    outputManager.updateData(epoch, round(time.time() - t_init), \
-                             train_nll, train_acc, \
-                             valid_nll, valid_acc, \
-                             test_nll, test_acc)
     if args.early_stopping:
         earlystopping.step(valid_nll)
         if earlystopping.stop:
