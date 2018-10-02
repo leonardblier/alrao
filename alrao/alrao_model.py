@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from switch import Switch
+from .switch import Switch
 
 
 class AlraoModel(nn.Module):
