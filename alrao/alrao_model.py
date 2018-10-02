@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from switch import Switch
 
 
@@ -84,7 +83,6 @@ class AlraoModel(nn.Module):
             'The method {} cannot be forwarded: an attribute with the same name already exists.'.format(method_name_dst)
         lst_methods = [getattr(cl, method_name_src) for cl in self.classifiers()]
 
-
         def f(*args, **kwargs):
             return [method(*args, **kwargs) for method in lst_methods]
 
@@ -93,6 +91,9 @@ class AlraoModel(nn.Module):
         setattr(self, f.__name__, f)
 
     def reset_parameters(self):
+        """
+        Resets both the classifiers and preclassifier's parameters.
+        """
         self.preclassifier.reset_parameters()
         for cl in self.classifiers():
             cl.reset_parameters()
@@ -157,19 +158,35 @@ class AlraoModel(nn.Module):
             cl.fc.bias.data = mean_bias.clone()
 
     def parameters_preclassifier(self):
+        """
+        Iterator over the preclassifier parameters
+        """
         return self.preclassifier.parameters()
 
     def classifiers(self):
+        """
+        Iterator over the classifiers
+        """
         for i in range(self.nclassifiers):
             yield getattr(self, "classifier"+str(i))
 
     def classifiers_parameters_list(self):
+        """
+        List of iterators, each one over a classifier parameters list.
+        """
         return [cl.parameters() for cl in self.classifiers()]
 
     def posterior(self):
+        """
+        Return the switch posterior over the classifiers
+        """
         return self.switch.logposterior.exp()
 
     def classifiers_predictions(self, x=None):
+        """
+        Return all the predictions, for each classifier.
+        If x is None, the last predictions are returned.
+        """
         if x is None:
             return self.last_lst_logpx
         x = self.preclassifier(x)
@@ -178,14 +195,10 @@ class AlraoModel(nn.Module):
         return lst_px
 
     def repr_posterior(self):
+        """
+        Compact string representation of the posterior
+        """
         post = self.posterior()
         bars = u' ▁▂▃▄▅▆▇█'
         res = "|"+"".join(bars[int(px)] for px in post/post.max() * 8) + "|"
         return res
-
-    def print_norm_parameters(self):
-        print("Pre-Classifier: {:.0e}".format(\
-            sum(float(p.norm()) for p in self.parameters_preclassifier())))
-        for (i, c) in enumerate(self.classifiers()):
-            print("Classifier {}: {:.0e}".format(i,
-                sum(float(p.norm()) for p in c.parameters())))
