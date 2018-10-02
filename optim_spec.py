@@ -12,9 +12,6 @@ These optimizers are copies of the original pytorch optimizers with one change:
     this layer, then uses it to update the layer.
 """
 
-
-
-                 
 class AdamSpec(optim.Optimizer):
     def __init__(self, params, lr_params, betas = (.9, .999), eps = 1e-8,
                  weight_decay=0, amsgrad=False):
@@ -86,9 +83,6 @@ class AdamSpec(optim.Optimizer):
                 p.data.addcdiv_(-step_size, torch.mul(exp_avg, lr_p), denom)
         return loss
 
-
-
-
 class SGDSpec(optim.Optimizer):
     def __init__(self, params, lr_params, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False):
@@ -139,23 +133,22 @@ class SGDSpec(optim.Optimizer):
                         d_p = buf
 
                 p.data.addcmul_(-1., d_p, lr_p)
-                
 
 
 class SGDRandDirNeuronsSpec(optim.Optimizer):
     def __init__(self, params, lr_params):
         defaults = dict()
         super(SGDRandDirNeuronsSpec, self).__init__(params, defaults)
-        
+
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
-            
+
 
     def __setstate__(self, state):
         super(SGDRandDirNeuronsSpec, self).__setstate__(state)
         # for group in self.param_groups:
         #     group.setdefault('nesterov', False)
-    
+
     def step(self, closure=None):
         loss = None
         if closure is not None:
@@ -182,16 +175,16 @@ class SGDRandDirWeightsSpec(optim.Optimizer):
     def __init__(self, params, lr_params):
         defaults = dict()
         super(SGDRandDirWeightsSpec, self).__init__(params, defaults)
-        
+
         for group in self.param_groups:
             group["lr_list"] = [lr for lr in lr_params]
-            
+
 
     def __setstate__(self, state):
         super(SGDRandDirWeightsSpec, self).__setstate__(state)
         # for group in self.param_groups:
         #     group.setdefault('nesterov', False)
-    
+
     def step(self, closure=None):
         loss = None
         if closure is not None:
@@ -208,9 +201,9 @@ class SGDRandDirWeightsSpec(optim.Optimizer):
                 p.data.add(-1, update.view(size))
 
 
-                
-                
-class OptSwitch:
+
+
+class OptAlrao:
     def __init__(self):
         pass
 
@@ -234,11 +227,11 @@ class OptSwitch:
             opt.zero_grad()
 
 
-class SGDSwitch(OptSwitch):
+class SGDAlrao(OptAlrao):
     def __init__(self, parameters_preclassifier, lr_preclassifier, classifiers_parameters_list,
                  classifiers_lr, momentum=0., weight_decay=0.):
 
-        super(SGDSwitch, self).__init__()
+        super(SGDAlrao, self).__init__()
         self.optpreclassifier = SGDSpec(parameters_preclassifier, lr_preclassifier,
                                 momentum=momentum, weight_decay=weight_decay)
         self.classifiers_lr = classifiers_lr
@@ -247,19 +240,12 @@ class SGDSwitch(OptSwitch):
              for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
 
 
-class AdamSwitch(OptSwitch):
+class AdamAlrao(OptAlrao):
     def __init__(self, parameters_preclassifier, lr_preclassifier, classifiers_parameters_list,
                  classifiers_lr, **kwargs):
 
-        super(AdamSwitch, self).__init__()
+        super(AdamAlrao, self).__init__()
 
         self.optpreclassifier = AdamSpec(parameters_preclassifier, lr_preclassifier, **kwargs)
         self.optclassifiers = [optim.Adam(parameters, lr, **kwargs) \
              for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
-
-
-
-
-
-
-

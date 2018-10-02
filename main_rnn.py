@@ -20,8 +20,6 @@ from learningratesgen import lr_sampler_generic, generator_randomlr_neurons, gen
 from earlystopping import EarlyStopping
 from alrao_model import AlraoModel
 import data_text
-# TO BE REMOVED
-from utils import Subset
 
 
 parser = argparse.ArgumentParser(description='alrao')
@@ -37,8 +35,6 @@ parser.add_argument('--early_stopping', action='store_true', default=False,
                     help='use early stopping')
 
 # options
-parser.add_argument('--model_name', default='LSTM',
-                    help='Model {LSTM, GRU}')
 parser.add_argument('--drop_out', type=float, default=.2,
                     help='drop-out rate')
 parser.add_argument('--optimizer', default='SGD',
@@ -63,35 +59,38 @@ parser.add_argument('--clip', type=float, default=.25,
                     help='gradient clipping')
 parser.add_argument('--batch_size', type=int, default=20,
                     help='batch size')
-parser.add_argument('--bptt', type=int, default=70,
+parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
-parser.add_argument('--word_prediction', action = 'store_true', default = False, \
-                    help = 'task: word prediction')
+parser.add_argument('--char_prediction', action = 'store_true', default = False,
+                    help = 'task: character prediction')
 
 # Alrao Parameters
 parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
-parser.add_argument('--minLR', type=int, default=-3,
-                    help='log10 of the minimum LR in alrao (log_10 eta_min)')
-parser.add_argument('--maxLR', type=int, default=2,
-                    help='log10 of the maximum LR in alrao (log_10 eta_max)')
+parser.add_argument('--minlr', type=int, default=.001,
+                    help='minimum LR in alrao (eta_min)')
+parser.add_argument('--maxlr', type=int, default=100.,
+                    help='maximum LR in alrao (eta_max)')
 parser.add_argument('--nb_class', type=int, default=6,
                     help='number of classifiers before the switch')
 
 args = parser.parse_args()
 
-
 if args.no_cuda or not torch.cuda.is_available():
     use_cuda = False
 else:
     use_cuda = True
-
 device = torch.device("cuda" if use_cuda else "cpu")
 
-best_acc = 0  # best test accuracy
+model_name = 'LSTM'
 
+# Build dataset
 batch_size = args.batch_size
-corpus = data_text.Corpus(args.data_path, char_prediction = not args.word_prediction)
+eval_batch_size = 10
+
+corpus = data_text.Corpus(args.data_path, char_prediction = not args.char_prediction)
+ntokens = len(corpus.dictionary)
+print('Number of tokens: ' + repr(ntokens))
 
 def batchify(data, bsz):
     # Work out how cleanly we can divide the dataset into bsz parts.
@@ -102,30 +101,23 @@ def batchify(data, bsz):
     data = data.view(bsz, -1).t().contiguous()
     return data.to(device)
 
-eval_batch_size = 10
 train_data = batchify(corpus.train, batch_size)
 valid_data = batchify(corpus.valid, eval_batch_size)
 test_data = batchify(corpus.test, eval_batch_size)
 
+# Build model
 class StandardModel(nn.Module):
     def __init__(self, preclassifier, classifier, *args, **kwargs):
         super(StandardModel, self).__init__()
         self.preclassifier = preclassifier
-        self.classifier = classifier(*args, **kwargs).to(device)
+        self.classifier = classifier(*args, **kwargs) #.to(device)
 
     def forward(self, x):
         x = self.preclassifier(x)
         return self.classifier(x)
 
-base_lr = args.lr
-minlr = 10 ** args.minLR
-maxlr = 10 ** args.maxLR
-
-ntokens = len(corpus.dictionary)
-print('Number of tokens: ' + repr(ntokens))
-
-preclassifier = RNNModel(args.model_name, ntokens, args.emsize, args.nhid,
-                         args.nlayers, args.drop_out).to(device)
+preclassifier = RNNModel(model_name, ntokens, args.emsize, args.nhid,
+                         args.nlayers, args.drop_out) #.to(device)
 if args.use_alrao:
     net = AlraoModel(preclassifier, args.nb_class, LinearClassifierRNN, args.nhid, ntokens)
     total_param = sum(np.prod(p.size()) for p in net.parameters_preclassifier())
@@ -143,7 +135,13 @@ if use_cuda:
 
 criterion = nn.NLLLoss()
 
+# Build optimizer
+base_lr = args.lr
+minlr = args.minlr
+maxlr = args.maxlr
+
 if args.use_alrao:
+    # Build the learning rates for each classifier
     if args.nb_class > 1:
         classifiers_lr = [np.exp(\
                 np.log(minlr) + k /(args.nb_class-1) * (np.log(maxlr) - np.log(minlr)) \
@@ -152,6 +150,7 @@ if args.use_alrao:
     else:
         classifiers_lr = [minlr]
 
+    # Build the learning rates for the pre-classifier
     lr_sampler = lr_sampler_generic(minlr, maxlr)
     lr_preclassifier = generator_randomlr_neurons(net.preclassifier, lr_sampler)
 
@@ -167,7 +166,6 @@ if args.use_alrao:
                                lr_preclassifier,
                                net.classifiers_parameters_list(),
                                classifiers_lr)
-
 else:
     if args.optimizer == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr=base_lr)
@@ -183,14 +181,12 @@ def get_batch(source, i):
 # Training
 log_interval = 200
 def train(epoch):
-    # Turn on training mode which enables dropout.
     net.train()
     if args.use_alrao:
         optimizer.update_posterior(net.posterior())
         net.switch.reset_cl_perf()
     total_loss = 0.
     epoch_loss = 0.
-    nb_it = 0
     correct = 0
     total_pred = 0
     start_time = time.time()
@@ -201,11 +197,9 @@ def train(epoch):
     pbar.set_description("Epoch %d" % epoch)
 
     for batch_idx, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
-        nb_it += 1
         data, targets = get_batch(train_data, i)
         data, targets = data.cuda(), targets.cuda()
-        # Starting each batch, we detach the hidden state from how it was previously produced.
-        # If we didn't, the model would try backpropagating all the way to start of the dataset.
+
         hidden.detach_()
         current.detach_()
         net.zero_grad()
@@ -220,7 +214,6 @@ def train(epoch):
                 loss_classifier = criterion(classifier(newx), targets)
                 loss_classifier.backward()
 
-        # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
         torch.nn.utils.clip_grad_norm_(net.preclassifier.parameters(), args.clip)
         optimizer.step()
 
@@ -247,11 +240,9 @@ def train(epoch):
             print("Classifier {}\t LossTrain:{:.6f}\tAccTrain:{:.4f}".format(
                 k, cl_perf[k][0], cl_perf[k][1]))
 
-    return epoch_loss / nb_it, correct / total_pred
+    return epoch_loss / (batch_idx + 1), correct / total_pred
 
 def test(epoch, loader):
-    global best_acc
-    # Turn on evaluation mode which disables dropout.
     net.eval()
     if args.use_alrao:
         net.switch.reset_cl_perf()
