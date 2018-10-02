@@ -13,7 +13,13 @@ import pdb
 #TODO : Let choose the hyperparameters of the switch !
 class Switch(nn.Module):
     """
-    This class implements the switch distribution
+    Model averaging method 'switch'.
+    See van Erven and Grünwald (2008):
+     (A) https://arxiv.org/abs/0807.1005,
+     (B) http://papers.nips.cc/paper/3277-catching-up-faster-in-bayesian-model-selection-and-model-averaging.pdf.
+
+    This class manages model averaging and updates its parameters using the update
+        rule given in algorithm 1 of (B).
     """
     def __init__(self, nb_models, theta = .9999, alpha=0.001, save_cl_perf=False):
         super(Switch, self).__init__()
@@ -24,7 +30,7 @@ class Switch(nn.Module):
         self.t = 1
 
         self.save_cl_perf = save_cl_perf
-        
+
         self.register_buffer("logw",
             torch.zeros((2, nb_models), requires_grad=False)
         )
@@ -34,10 +40,10 @@ class Switch(nn.Module):
         self.logw[0].fill_(np.log(theta))
         self.logw[1].fill_(np.log(1 - theta))
         self.logw -= np.log(nb_models)
-        
+
         if self.save_cl_perf:
             self.reset_cl_perf()
-            
+
     def reset_cl_perf(self):
         self.cl_loss = [0 for _ in range(self.nb_models)]
         self.cl_correct = [0 for _ in range(self.nb_models)]
@@ -46,25 +52,28 @@ class Switch(nn.Module):
     def get_cl_perf(self):
         return [(loss / self.cl_total, corr / self.cl_total) \
                 for (loss, corr) in zip(self.cl_loss, self.cl_correct)]
-        
+
     def piT(self, t):
         """
-        Reprent the prior pi_t in algorithm 1
+        Prior \pi_T in algorithm 1 of (B).
         """
-        return 1/(t+1) #(1.-self.alpha)
-    
+        return 1 / (t + 1) #(1.-self.alpha)
+
     def Supdate(self, lst_logpx, y):
         """
-        This implements algorithm 1 in "Catching Up Faster in Bayesian 
-        Model Selection and Model Averaging
+        Switch update rule given in algorithm 1 of (B).
+
+        Arguments:
+            lst_logpx: list of the outputs of the models, which are supposed to be
+                tensors of log-probabilities
+            y: tensor of targets
         """
         if self.save_cl_perf:
             self.cl_total += 1
             for (k, x) in enumerate(lst_logpx):
                 self.cl_loss[k] += F.nll_loss(x, y).item()
-                self.cl_correct[k] += (torch.max(x, 1)[1]).eq(y.data).sum().item() / y.size()[0]
+                self.cl_correct[k] += (torch.max(x, 1)[1]).eq(y.data).sum().item() / y.size(0)
 
-        
         # px is the tensor of the log probabilities of the mini-batch for each classifier
         logpx = torch.stack([-F.nll_loss(x, y, size_average=True) for x in lst_logpx],
                             dim=0).detach()
@@ -84,18 +93,26 @@ class Switch(nn.Module):
         addtensor[1].fill_(np.log(1-self.theta))
 
         self.logw = log_sum_exp(torch.stack([self.logw,
-            addtensor + logpool - np.log(self.nb_models)], dim=0), dim = 0)
+            addtensor + logpool - np.log(self.nb_models)], dim=0), dim=0)
 
         self.logw -= log_sum_exp(self.logw)
         self.logposterior = log_sum_exp(self.logw, dim=0)
         self.t += 1
 
     def forward(self, lst_logpx):
-        return log_sum_exp(torch.stack(lst_logpx,-1) + self.logposterior, dim=-1)
-    
+        """
+        Computes the average of the outputs of the different models.
+
+        Arguments:
+            lst_logpx: list of the outputs of the models, which are supposed to be
+                tensors of log-probabilities
+        """
+        return log_sum_exp(torch.stack(lst_logpx, -1) + self.logposterior, dim=-1)
+
 
 def log_sum_exp(tensor, dim=None):
-    """Numerically stable implementation of the operation
+    """
+    Numerically stable implementation of the operation.
 
     tensor.exp().sum(dim, keepdim).log()
     From https://github.com/pytorch/pytorch/issues/2591
