@@ -1,5 +1,4 @@
 from functools import partial
-from torch.optim import Optimizer
 
 
 class EarlyStopping(object): # pylint: disable=R0902
