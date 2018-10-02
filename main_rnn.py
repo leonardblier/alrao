@@ -88,7 +88,7 @@ model_name = 'LSTM'
 batch_size = args.batch_size
 eval_batch_size = 10
 
-corpus = data_text.Corpus(args.data_path, char_prediction = not args.char_prediction)
+corpus = data_text.Corpus(args.data_path, char_prediction = args.char_prediction)
 ntokens = len(corpus.dictionary)
 print('Number of tokens: ' + repr(ntokens))
 
