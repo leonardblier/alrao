@@ -77,12 +77,12 @@ preclassifier = VGG([64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M',
 # Classifier class
 class Classifier(nn.Module): # identical to alrao.mymodels.LinearClassifier
     def __init__(self, in_features, n_classes):
-        super(LinearClassifier, self).__init__()
+        super(Classifier, self).__init__()
         self.fc = nn.Linear(in_features, n_classes)
 
     def forward(self, x):
         x = self.fc(x)
-        x = F.log_softmax(x, dim=1)
+        x = nn.functional.log_softmax(x, dim=1)
         return x
 
 # We define the interval in which the learning rates are sampled
