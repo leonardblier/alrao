@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 class LinearClassifier(nn.Module):
     """
-    Linear classifier layer : a linear layer followed by a log_softmax activation
+    Linear classifier layer: a linear layer followed by a log_softmax activation
     """
     def __init__(self, in_features, n_classes):
         super(LinearClassifier, self).__init__()
@@ -26,8 +26,7 @@ class LinearClassifier(nn.Module):
 
 class LinearClassifierRNN(nn.Module):
     """
-    Linear classifier layer for RNNs
-    TODO: Explain more
+    Linear classifier layer for RNNs: a decoder (linear layer) followed by a log_softmax activation
     """
     def __init__(self, nhid, ntoken):
         super(LinearClassifierRNN, self).__init__()
@@ -45,8 +44,8 @@ class LinearClassifierRNN(nn.Module):
 
     def forward(self, output):
         """
-        Forward pass method
-        TODO: Explain more
+        Forward pass method: flattening of the output (specific to RNNs), which is processed by a
+            linear layer followed by a log_softmax activation
         """
         ret = self.decoder(output.view(output.size(0) * output.size(1), output.size(2)))
         return F.log_softmax(ret, dim=1)
