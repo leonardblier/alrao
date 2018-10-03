@@ -1,14 +1,15 @@
-import os
+"""
+Switch model averaging
+"""
+
+
 import math
+from numbers import Number
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.parameter import Parameter
-from torch.autograd import Variable
 
-from numbers import Number
-import pdb
 
 #TODO : Let choose the hyperparameters of the switch !
 class Switch(nn.Module):
@@ -21,7 +22,7 @@ class Switch(nn.Module):
     This class manages model averaging and updates its parameters using the update
         rule given in algorithm 1 of (B).
     """
-    def __init__(self, nb_models, theta = .9999, alpha=0.001, save_cl_perf=False):
+    def __init__(self, nb_models, theta=.9999, alpha=0.001, save_cl_perf=False):
         super(Switch, self).__init__()
 
         self.nb_models = nb_models
@@ -31,12 +32,10 @@ class Switch(nn.Module):
 
         self.save_cl_perf = save_cl_perf
 
-        self.register_buffer("logw",
-            torch.zeros((2, nb_models), requires_grad=False)
-        )
+        self.register_buffer("logw", torch.zeros((2, nb_models), requires_grad=False))
         self.register_buffer("logposterior",
-            torch.full((nb_models,), -np.log(nb_models), requires_grad=False)
-        )
+                             torch.full((nb_models,),
+                             -np.log(nb_models), requires_grad=False))
         self.logw[0].fill_(np.log(theta))
         self.logw[1].fill_(np.log(1 - theta))
         self.logw -= np.log(nb_models)
@@ -45,17 +44,23 @@ class Switch(nn.Module):
             self.reset_cl_perf()
 
     def reset_cl_perf(self):
+        """
+        Resets the performance record of classifier models
+        """
         self.cl_loss = [0 for _ in range(self.nb_models)]
         self.cl_correct = [0 for _ in range(self.nb_models)]
         self.cl_total = 0
 
     def get_cl_perf(self):
+        """
+        Return the performance (loss and acc) of each classifier
+        """
         return [(loss / self.cl_total, corr / self.cl_total) \
                 for (loss, corr) in zip(self.cl_loss, self.cl_correct)]
 
     def piT(self, t):
         """
-        Prior \pi_T in algorithm 1 of (B).
+        Prior  pi_T in algorithm 1 of (B).
         """
         return 1 / (t + 1) #(1.-self.alpha)
 
@@ -79,9 +84,9 @@ class Switch(nn.Module):
                             dim=0).detach()
         from math import isnan
         if any(isnan(p) for p in logpx):
-            stop
+            raise ValueError
         if self.nb_models == 1:
-            return None
+            return
 
         self.logw += logpx
         pit = self.piT(self.t)
@@ -120,7 +125,7 @@ def log_sum_exp(tensor, dim=None):
     if dim is not None:
         m, _ = torch.max(tensor, dim=dim, keepdim=True)
         tensor0 = tensor - m
-        return m.squeeze(dim=dim) + torch.log(torch.sum(torch.exp(tensor0),dim=dim))
+        return m.squeeze(dim=dim) + torch.log(torch.sum(torch.exp(tensor0), dim=dim))
     else:
         m = torch.max(tensor)
         sum_exp = torch.sum(torch.exp(tensor - m))
