@@ -19,6 +19,7 @@ A tutorial on how to use Alrao with custom models is in `tutorial.ipynb`.
 The script `main_cnn.py` trains convolutional neural networks on CIFAR10.
 
 The main options are:
+```
   --no-cuda             disable cuda
   --epochs EPOCHS       number of epochs for phase 1 (default: 50)
   --model_name MODEL_NAME
@@ -30,15 +31,15 @@ The main options are:
   --minLR MINLR         log10 of the minimum LR in alrao (log_10 eta_min)
   --maxLR MAXLR         log10 of the maximum LR in alrao (log_10 eta_max)
   --nb_class NB_CLASS   number of classifiers used in Alrao (default 10)
-
+```
 More options are available. Check it by running `python main_cnn.py --help`.
 For example, to use the script with Alrao on the interval (10**-5, 10) with GoogLeNet, run :
-```python
+```
 python main_cnn.py --use_alrao --minLR -5 --maxLR 1 --nb_class 10 --model_name GoogLeNet
 ```
 
 If you want to train the same model but with SGD with a learning rate 10**-3, run:
-```python
+```
 python main_cnn.py --lr 0.001 --model_name GoogLeNet
 ```
 
@@ -48,6 +49,7 @@ The available models are VGG19, GoogLeNet, MobileNetV2, SENet18.
 The script `main_rnn.py` trains a recurrent neural networks on PTB with a LSTM.
 
 The main options are:
+```
 --no-cuda             disable cuda
 --epochs EPOCHS       number of epochs for phase 1 (default: 50)
 --optimizer OPTIMIZER
@@ -57,16 +59,17 @@ The main options are:
 --minlr MINLR         minimum LR in alrao (eta_min)
 --maxlr MAXLR         maximum LR in alrao (eta_max)
 --nb_class NB_CLASS   number of classifiers before the switch
+```
 
 More options are available. Check it by running `python main_rnn.py --help`.
 
 For example, to use the script with Alrao on the interval (10**-3, 100) with GoogLeNet, run :
-```python
+```
 python main_rnn.py --use_alrao --minLR -3 --maxLR 2 --nb_class 10
 ```
 
 If you want to train the same model but with SGD with a learning rate 10**-1, run:
-```python
+```
 python main_cnn.py --lr 0.1
 ```
 
