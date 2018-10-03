@@ -17,14 +17,14 @@ from tqdm import tqdm
 import numpy as np
 
 from models import GoogLeNet, MobileNetV2, VGG, SENet18
-from mymodels import LinearClassifier
-from optim_spec import SGDAlrao, AdamAlrao
-from learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
+from alrao.custom_layers import LinearClassifier
+from alrao.optim_spec import SGDAlrao, AdamAlrao
+from alrao.learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
 
-from earlystopping import EarlyStopping
-from alrao_model import AlraoModel
+from alrao.earlystopping import EarlyStopping
+from alrao.alrao_model import AlraoModel
 # TO BE REMOVED
-from utils import Subset
+from alrao.utils import Subset
 
 
 parser = argparse.ArgumentParser(description='alrao')
@@ -94,7 +94,7 @@ transform_test = transforms.Compose([
 ])
 
 # Train set
-DATA_DIR = './datasets'
+DATA_DIR = './data'
 trainset = torchvision.datasets.CIFAR10(root=DATA_DIR, train=True,
                                         download=True, transform=transform_train)
 trainset = Subset(trainset, list(range(0, 40000)))
