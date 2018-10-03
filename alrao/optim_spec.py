@@ -1,7 +1,3 @@
-import math
-import torch
-import torch.optim as optim
-
 r"""
 These optimizers are copies of the original pytorch optimizers with one change:
     They take 2 specific arguments: named_parameters (instead of params) and named_lr.
@@ -12,8 +8,22 @@ These optimizers are copies of the original pytorch optimizers with one change:
     this layer, then uses it to update the layer.
 """
 
+import math
+import torch
+import torch.optim as optim
+
+
 class AdamSpec(optim.Optimizer):
-    def __init__(self, params, lr_params, betas = (.9, .999), eps = 1e-8,
+    """
+    Adam modification for the preclassifier with Alrao
+
+    Arguments:
+        params: Iterator over the parameters
+        lr_params: Iterator over the learning rates tensor. Same length than params, and
+                    each lr tensor must have the same shape than the corresponding parameter
+        other: Exactly the same as usual Adam
+    """
+    def __init__(self, params, lr_params, betas=(.9, .999), eps=1e-8,
                  weight_decay=0, amsgrad=False):
 
         defaults = dict(betas=betas, eps=eps, weight_decay=weight_decay,
@@ -24,11 +34,14 @@ class AdamSpec(optim.Optimizer):
             group["lr_list"] = [lr for lr in lr_params]
 
     def __setstate__(self, state):
-        super(Adam, self).__setstate__(state)
+        super(AdamSpec, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('amsgrad', False)
 
     def step(self, closure=None):
+        """
+        Compute a step of the optimizer
+        """
         loss = None
         if closure is not None:
             loss = closure()
@@ -45,7 +58,7 @@ class AdamSpec(optim.Optimizer):
                 state = self.state[p]
 
                 # State initialization
-                if len(state) == 0:
+                if not state:
                     state['step'] = 0
                     # Exponential moving average of gradient values
                     state['exp_avg'] = torch.zeros_like(p.data)
@@ -84,6 +97,15 @@ class AdamSpec(optim.Optimizer):
         return loss
 
 class SGDSpec(optim.Optimizer):
+    """
+    SGD modification for the preclassifier with Alrao
+
+    Arguments:
+        params: Iterator over the parameters
+        lr_params: Iterator over the learning rates tensor. Same length than params, and
+                    each lr tensor must have the same shape than the corresponding parameter
+        other: Exactly the same as usual SGD
+    """
     def __init__(self, params, lr_params, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False):
         defaults = dict(momentum=momentum, dampening=dampening,
@@ -95,11 +117,14 @@ class SGDSpec(optim.Optimizer):
 
 
     def __setstate__(self, state):
-        super(SGD, self).__setstate__(state)
+        super(SGDSpec, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
 
     def step(self, closure=None):
+        """
+        Compute a step of the optimizer
+        """
         loss = None
         if closure is not None:
             loss = closure()
@@ -136,6 +161,9 @@ class SGDSpec(optim.Optimizer):
 
 
 class SGDRandDirNeuronsSpec(optim.Optimizer):
+    """
+    TODO
+    """
     def __init__(self, params, lr_params):
         defaults = dict()
         super(SGDRandDirNeuronsSpec, self).__init__(params, defaults)
@@ -165,13 +193,16 @@ class SGDRandDirNeuronsSpec(optim.Optimizer):
                 elif dim == 2:
                     p.data.addmm_(d_p, lr_p, alpha=-1)
                 elif dim >= 3:
-                    update = torch.matmul(lr_p, d_p.transpose(0, -2)).transpose(0,-2)
+                    update = torch.matmul(lr_p, d_p.transpose(0, -2)).transpose(0, -2)
                     p.data.add_(-1, update)
                 else:
                     raise ValueError
 
 
 class SGDRandDirWeightsSpec(optim.Optimizer):
+    """
+    TODO
+    """
     def __init__(self, params, lr_params):
         defaults = dict()
         super(SGDRandDirWeightsSpec, self).__init__(params, defaults)
@@ -204,6 +235,9 @@ class SGDRandDirWeightsSpec(optim.Optimizer):
 
 
 class OptAlrao:
+    """
+    Generic class for Alrao's optimisation methods.
+    """
     def __init__(self):
         pass
 
@@ -228,12 +262,21 @@ class OptAlrao:
 
 
 class SGDAlrao(OptAlrao):
+    """
+    Alrao-SGD optimisation method.
+    Arguments:
+        parameters_preclassifiers: iterator over the preclassifier parameters
+        lr_preclassifier: Iterator over the preclassifier learning rates
+        classifier_parameters_list: List of iterators over each classifier parameters
+        classifiers_lr: List of iterators over each classifier learning rates
+        other: as normal SGD
+    """
     def __init__(self, parameters_preclassifier, lr_preclassifier, classifiers_parameters_list,
                  classifiers_lr, momentum=0., weight_decay=0.):
 
         super(SGDAlrao, self).__init__()
         self.optpreclassifier = SGDSpec(parameters_preclassifier, lr_preclassifier,
-                                momentum=momentum, weight_decay=weight_decay)
+                                        momentum=momentum, weight_decay=weight_decay)
         self.classifiers_lr = classifiers_lr
         self.optclassifiers = \
             [optim.SGD(parameters, lr, momentum=momentum, weight_decay=weight_decay) \
@@ -241,6 +284,15 @@ class SGDAlrao(OptAlrao):
 
 
 class AdamAlrao(OptAlrao):
+    """
+    Alrao-SGD optimisation method.
+    Arguments:
+        parameters_preclassifiers: iterator over the preclassifier parameters
+        lr_preclassifier: Iterator over the preclassifier learning rates
+        classifier_parameters_list: List of iterators over each classifier parameters
+        classifiers_lr: List of iterators over each classifier learning rates
+        other: as normal Adam
+    """
     def __init__(self, parameters_preclassifier, lr_preclassifier, classifiers_parameters_list,
                  classifiers_lr, **kwargs):
 
