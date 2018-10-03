@@ -2,4 +2,4 @@
 
 ## SubTitle
 
-Text
+Text $\theta$
