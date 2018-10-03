@@ -1,7 +1,11 @@
+"""
+Early stopping tool
+"""
+
 from functools import partial
 
 
-class EarlyStopping(object): # pylint: disable=R0902
+class EarlyStopping: # pylint: disable=R0902
     """
     Gives a criterion to stop training when a given metric is not
     improving anymore
