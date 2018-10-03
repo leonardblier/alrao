@@ -113,7 +113,6 @@ class LinearClassifier(nn.Module):
 
     def forward(self, x):
         x = self.fc(x)
-        #x = F.log_softmax(x, dim=1)
         x = F.log_softmax(x, dim=1)
         return x
 
