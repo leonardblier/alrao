@@ -18,9 +18,8 @@ TODO
 
 ### Provided models
 
-pre-classifiers: VGG, GoogLeNet, LSTM, ... (TODO).
-
-classifiers: linear classifier (feddforward), linear classifier (RNN).
+ * pre-classifiers: VGG, GoogLeNet, LSTM, ... (TODO);
+ * classifiers: linear classifier (feedforward), linear classifier (RNN).
 
 ### Custom models
 
