@@ -8,7 +8,8 @@ class AlraoModel(nn.Module):
     AlraoModel is the class transforming a pre-classifier into a model learnable with Alrao.
 
     Arguments:
-        preclassifier: pre-classifier preclassifier to train. It is an entire network, given without its last layer.
+        preclassifier: pre-classifier preclassifier to train.
+                        It is an entire network, given without its last layer.
         nclassifiers: number of classifiers to use with the model averaging method
         nclasses: number of classes in the classification task
         classifier_gen: python class to use to construct the classifiers
@@ -24,12 +25,15 @@ class AlraoModel(nn.Module):
             classifier = classifier_gen(*args, **kwargs)
             setattr(self, "classifier" + str(i), classifier)
 
-    def method_fwd_preclassifier(self, method_name_src, method_name_dst = None):
+        self.last_x, self.last_lst_logpx = None, None
+
+    def method_fwd_preclassifier(self, method_name_src, method_name_dst=None):
         r"""
         Allows the user to call directly a method of the pre-classifier.
 
         Creates a new method for the called instance of AlraoModel named 'method_name_dst'.
-        Calling this method is exactly equivalent to calling the method of 'self.preclassifier' named 'method_name_src'.
+        Calling this method is exactly equivalent to calling the method of
+        'self.preclassifier' named 'method_name_src'.
         If 'method_name_dst' is left to 'None', 'method_name_dst' is set to 'method_name_src'.
 
         Example:
@@ -49,13 +53,13 @@ class AlraoModel(nn.Module):
         assert getattr(self, method_name_dst, None) is None, \
             'The method {} cannot be forwarded: an attribute with the same name already exists.'.format(method_name_dst)
         method = getattr(self.preclassifier, method_name_src)
-        def f(*args, **kwargs):
+        def forwarded_method(*args, **kwargs):
             return method(*args, **kwargs)
-        f.__doc__ = method.__doc__
-        f.__name__ = method_name_dst
-        setattr(self, f.__name__, f)
+        forwarded_method.__doc__ = method.__doc__
+        forwarded_method.__name__ = method_name_dst
+        setattr(self, forwarded_method.__name__, forwarded_method)
 
-    def method_fwd_classifiers(self, method_name_src, method_name_dst = None):
+    def method_fwd_classifiers(self, method_name_src, method_name_dst=None):
         r"""
         Allows the user to call directly a method of the classifiers.
 
@@ -83,12 +87,12 @@ class AlraoModel(nn.Module):
             'The method {} cannot be forwarded: an attribute with the same name already exists.'.format(method_name_dst)
         lst_methods = [getattr(cl, method_name_src) for cl in self.classifiers()]
 
-        def f(*args, **kwargs):
+        def forwarded_method(*args, **kwargs):
             return [method(*args, **kwargs) for method in lst_methods]
 
-        f.__doc__ = lst_methods[0].__doc__
-        f.__name__ = method_name_dst
-        setattr(self, f.__name__, f)
+        forwarded_method.__doc__ = lst_methods[0].__doc__
+        forwarded_method.__name__ = method_name_dst
+        setattr(self, forwarded_method.__name__, forwarded_method)
 
     def reset_parameters(self):
         """
@@ -144,8 +148,8 @@ class AlraoModel(nn.Module):
         """
         logpost = self.switch.logposterior
         weak_cl = [cl for cl, lp in zip(self.classifiers(), logpost) if lp < threshold]
-        if len(weak_cl) == 0:
-            return None
+        if not weak_cl:
+            return
 
         mean_weight = torch.stack(
             [cl.fc.weight * p for (cl, p) in zip(self.classifiers(), logpost.exp())],
