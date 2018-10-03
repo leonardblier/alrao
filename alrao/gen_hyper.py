@@ -70,7 +70,10 @@ def frand_lr_log(minLR, maxLR):
     return f
 
 # Momentum TODO
-def fdet_mom_id(t):
+def fdet_mom_id(t, mom_min, mom_max):
+    """
+    TODO
+    """
     ret = t.new().resize_as_(t)
     mom_dst = mom_max - mom_min
     for i in range(t.size()[0]):
@@ -79,6 +82,6 @@ def fdet_mom_id(t):
 
     return ret
 
-def fdet_mom_unif(t, u = 0):
+def fdet_mom_unif(t, u=0):
     ret = t.new().resize_as_(t).fill_(u)
     return ret
