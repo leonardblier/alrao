@@ -141,10 +141,19 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
+        # Update progression bar
         pbar.update(batch_size)
         postfix = OrderedDict([("LossTrain","{:.4f}".format(train_loss/(batch_idx+1))),
                                ("AccTrain", "{:.3f}".format(100.*correct/total))])
         postfix["PostSw"] = net.repr_posterior()
+        pbar.set_postfix(postfix)
+    pbar.close()
+
+    # Print performance of the classifiers
+    cl_perf = net.switch.get_cl_perf()
+    for k in range(len(cl_perf)):
+        print("Classifier {}\t LossTrain:{:.6f}\tAccTrain:{:.4f}".format(
+            k, cl_perf[k][0], cl_perf[k][1]))
 
 def test(epoch):
     net.eval()
@@ -167,7 +176,7 @@ def test(epoch):
         correct += predicted.eq(targets).sum().item()
 
     print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
-    #print(("Posterior : "+"{:.1e}, " * nb_classifiers).format(*net.posterior()))
+    print(("Posterior : "+"{:.1e}, " * nb_classifiers).format(*net.posterior()))
 
     return test_loss / (batch_idx + 1), correct / total
 
