@@ -13,9 +13,11 @@ The requirements are:
 * tqdm
 
 ## Tutorial
+
 A tutorial on how to use Alrao with custom models is in `tutorial.ipynb`.
 
 ## Sample script for using Alrao with convolutional models on CIFAR10
+
 The script `main_cnn.py` trains convolutional neural networks on CIFAR10.
 
 The main options are:
@@ -46,23 +48,15 @@ python main_cnn.py --lr 0.001 --model_name GoogLeNet
 The available models are VGG19, GoogLeNet, MobileNetV2, SENet18.
 
 ## Sample script for using Alrao with recurrent models on PTB
-The script `main_rnn.py` trains a recurrent neural networks on PTB with a LSTM.
 
-The main options are:
+The script `main_rnn.py` trains a recurrent neural networks on PTB with a LSTM. By default, the LSTM is trained for word prediction with a backpropagation through time (bptt) of 35. The setup given in the paper is obtained with the following options:
 ```
---no-cuda             disable cuda
---epochs EPOCHS       number of epochs for phase 1 (default: 50)
---optimizer OPTIMIZER
-                      optimizer (default: SGD) {Adam, SGD}
---lr LR               learning rate, when used without alrao
---use_alrao           multiple learning rates
---minlr MINLR         minimum LR in alrao (eta_min)
---maxlr MAXLR         maximum LR in alrao (eta_max)
---nb_class NB_CLASS   number of classifiers before the switch
+python main_rnn.py --char_prediction --bptt=70
 ```
 
-More options are available. Check it by running `python main_rnn.py --help`.
+Options given in the previous section are also available, as well as LSTM specific options (number of layers, size of the embedding, etc.). Check it by running `python main_rnn.py --help`.
 
+Note: in the code, the loss is computed with the natural logarithm, and not with the binary logarithm as mentioned in the paper. Thus, a conversion is necessary.
 
 ## How to use Alrao on custom models
 
