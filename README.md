@@ -73,16 +73,10 @@ If you want to train the same model but with SGD with a learning rate 10**-1, ru
 python main_cnn.py --lr 0.1
 ```
 
-## Recurrent Neural Networks
 
-TODO
 
-## Features
+## More details on how to use Alrao on custom models
 
-### Provided models
-
- * pre-classifiers: VGG, GoogLeNet, LSTM, ... (TODO);
- * classifiers: linear classifier (feedforward), linear classifier (RNN).
 
 ### Custom models
 
