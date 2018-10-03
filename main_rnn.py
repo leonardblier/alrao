@@ -18,7 +18,7 @@ from alrao import SGDAlrao, AdamAlrao
 from alrao import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
 from alrao.earlystopping import EarlyStopping
 
-import data_text
+import data.data_text as data_text
 
 
 parser = argparse.ArgumentParser(description='alrao')
@@ -46,7 +46,7 @@ parser.add_argument('--weight_decay', type=float, default=0.,
                     help='l2 penalty')
 
 # RNN
-parser.add_argument('--data_path', type=str, default='./ptb',
+parser.add_argument('--data_path', type=str, default='./data/ptb',
                     help='location of the data corpus')
 parser.add_argument('--emsize', type=int, default=100,
                     help='size of word embeddings')
