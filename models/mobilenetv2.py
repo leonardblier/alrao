@@ -3,6 +3,8 @@
 
 See the paper "Inverted Residuals and Linear Bottlenecks:
 Mobile Networks for Classification, Detection and Segmentation" for more details.
+
+The implementation is from https://github.com/kuangliu/pytorch-cifar
 '''
 import torch
 import torch.nn as nn
@@ -52,7 +54,7 @@ class MobileNetV2(nn.Module):
 
     def __init__(self, num_classes=10, gamma=1):
         super(MobileNetV2, self).__init__()
-        
+
         # NOTE: change conv1 stride 2 -> 1 for CIFAR10
         self.conv1 = nn.Conv2d(3, gamma*32, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(gamma*32)

@@ -1,4 +1,6 @@
-'''VGG11/13/16/19 in Pytorch.'''
+'''VGG11/13/16/19 in Pytorch.
+The implementation is from https://github.com/kuangliu/pytorch-cifar
+'''
 import torch
 import torch.nn as nn
 from torch.autograd import Variable

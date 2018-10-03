@@ -1,4 +1,6 @@
-'''GoogLeNet with PyTorch.'''
+'''GoogLeNet with PyTorch.
+The implementation is from https://github.com/kuangliu/pytorch-cifar
+'''
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,7 +19,7 @@ class Inception(nn.Module):
         n5x5red *= gamma
         n5x5 *= gamma
         pool_planes *= gamma
-        
+
         # 1x1 conv branch
         self.b1 = nn.Sequential(
             nn.Conv2d(in_planes, n1x1, kernel_size=1),

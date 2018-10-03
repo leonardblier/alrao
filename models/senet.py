@@ -1,6 +1,8 @@
 '''SENet in PyTorch.
 
 SENet is the winner of ImageNet-2017. The paper is not released yet.
+The implementation is from https://github.com/kuangliu/pytorch-cifar
+
 '''
 import torch
 import torch.nn as nn
@@ -53,7 +55,7 @@ class PreActBlock(nn.Module):
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
 
         #self.mybn = nn.BatchNorm2d(planes)
-        
+
         if stride != 1 or in_planes != planes:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_planes, planes, kernel_size=1, stride=stride, bias=False),
@@ -94,7 +96,7 @@ class SENet(nn.Module):
         self.layer4 = self._make_layer(block, gamma*512, num_blocks[3], stride=2)
         #self.linear = nn.Linear(512, num_classes)
         self.linearinputdim = gamma*512
-        
+
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
         layers = []
