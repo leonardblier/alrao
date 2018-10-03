@@ -149,12 +149,12 @@ def generator_randomlr_neurons(module, lr_sampler, memo=None):
             yield lr
 
     elif isinstance(module, nn.Embedding):
-        gen = generator_randomlr_linconv
+        gen = generator_randomlr_embedding
         for lr in generator_randomlr_embedding(module, lr_sampler, memo):
             yield lr
 
     elif isinstance(module, nn.LSTM):
-        gen = generator_randomlr_linconv
+        gen = generator_randomlr_lstm
         for lr in generator_randomlr_lstm(module, lr_sampler, memo):
             yield lr
 
