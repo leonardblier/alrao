@@ -1,14 +1,14 @@
 # Learning with Random Learning Rates
 
-Authors' implementation of "Learning with Random Learning Rates" (2018) in PyTorch (0.4 and higher).
+Authors' implementation of "Learning with Random Learning Rates" (2018) in PyTorch.
 
 Paper: https://arxiv.org/abs/1810.01322.
 
 Authors: Léonard Blier, Pierre Wolinski, Yann Ollivier.
 
 ## Requirements
-The requirements are
-* pytorch (0.4 and hight)
+The requirements are:
+* pytorch (0.4 and higher)
 * numpy, scipy
 * tqdm
 
@@ -33,7 +33,7 @@ The main options are:
   --nb_class NB_CLASS   number of classifiers used in Alrao (default 10)
 ```
 More options are available. Check it by running `python main_cnn.py --help`.
-For example, to use the script with Alrao on the interval (10**-5, 10) with GoogLeNet, run :
+For example, to use the script with Alrao on the interval (10**-5, 10) with GoogLeNet, run:
 ```
 python main_cnn.py --use_alrao --minLR -5 --maxLR 1 --nb_class 10 --model_name GoogLeNet
 ```
@@ -63,19 +63,8 @@ The main options are:
 
 More options are available. Check it by running `python main_rnn.py --help`.
 
-For example, to use the script with Alrao on the interval (10**-3, 100) with GoogLeNet, run :
-```
-python main_rnn.py --use_alrao --minLR -3 --maxLR 2 --nb_class 10
-```
 
-If you want to train the same model but with SGD with a learning rate 10**-1, run:
-```
-python main_cnn.py --lr 0.1
-```
-
-
-
-## More details on how to use Alrao on custom models
+## How to use Alrao on custom models
 
 
 ### Custom models
