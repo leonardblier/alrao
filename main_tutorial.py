@@ -15,7 +15,7 @@ import time
 from tqdm import tqdm
 import numpy as np
 
-from alrao import AlraoModel, LinearClassifier
+from alrao import AlraoModel
 from alrao import SGDAlrao, AdamAlrao
 from alrao import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
 
@@ -44,7 +44,7 @@ testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=Fals
 testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
 
 # Pre-classifier class
-class VGG(nn.Module):
+class VGG(nn.Module): # identical to models.VGG
     def __init__(self, cfg):
         super(VGG, self).__init__()
         self.features = self._make_layers(cfg)
@@ -74,6 +74,17 @@ class VGG(nn.Module):
 preclassifier = VGG([64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M',
                      512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'])
 
+# Classifier class
+class Classifier(nn.Module): # identical to alrao.mymodels.LinearClassifier
+    def __init__(self, in_features, n_classes):
+        super(LinearClassifier, self).__init__()
+        self.fc = nn.Linear(in_features, n_classes)
+
+    def forward(self, x):
+        x = self.fc(x)
+        x = F.log_softmax(x, dim=1)
+        return x
+
 # We define the interval in which the learning rates are sampled
 minlr = 10 ** (-5)
 maxlr = 10 ** 1
@@ -81,7 +92,7 @@ maxlr = 10 ** 1
 # nb_classifiers is the number of classifiers averaged by Alrao.
 nb_classifiers = 10
 nb_categories = 10
-net = AlraoModel(preclassifier, nb_classifiers, LinearClassifier, preclassifier.linearinputdim, nb_categories)
+net = AlraoModel(preclassifier, nb_classifiers, Classifier, preclassifier.linearinputdim, nb_categories)
 if use_cuda: net.cuda()
 
 # We spread the classifiers learning rates log-uniformly on the interval.
