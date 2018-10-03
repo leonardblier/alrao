@@ -6,18 +6,25 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+import torchvision
+import torchvision.transforms as transforms
+
 import os
 import argparse
 import time
 from tqdm import tqdm
 import numpy as np
 
-from models import RNNModel
 from alrao import AlraoModel, LinearClassifier
 from alrao import SGDAlrao, AdamAlrao
 from alrao import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
 
+# CUDA
+use_cuda = torch.cuda.is_available()
+
 # Data: CIFAR-10
+batch_size = 32
+
 transform_train = transforms.Compose([
     transforms.RandomCrop(32, padding=4),
     transforms.RandomHorizontalFlip(),
@@ -30,10 +37,10 @@ transform_test = transforms.Compose([
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=True, num_workers=2)
+trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=False, transform=transform_train)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
 
-testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
+testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=False, transform=transform_test)
 testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
 
 # Pre-classifier class
@@ -75,6 +82,7 @@ maxlr = 10 ** 1
 nb_classifiers = 10
 nb_categories = 10
 net = AlraoModel(preclassifier, nb_classifiers, LinearClassifier, preclassifier.linearinputdim, nb_categories)
+if use_cuda: net.cuda()
 
 # We spread the classifiers learning rates log-uniformly on the interval.
 classifiers_lr = [np.exp(np.log(minlr) + \
@@ -90,6 +98,7 @@ optimizer = SGDAlrao(net.parameters_preclassifier(),
                      lr_preclassifier,
                      net.classifiers_parameters_list(),
                      classifiers_lr)
+criterion = nn.NLLLoss()
 
 def train(epoch):
     train_loss = 0
@@ -99,7 +108,7 @@ def train(epoch):
     pbar.set_description("Epoch %d" % epoch)
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         net.train()
-        inputs, targets = inputs.cuda(), targets.cuda()
+        if use_cuda: inputs, targets = inputs.cuda(), targets.cuda()
 
         # We update the model averaging weights in the optimizer
         optimizer.update_posterior(net.posterior())
@@ -107,7 +116,7 @@ def train(epoch):
 
         # Forward pass of the Alrao model
         outputs = net(inputs)
-        loss = nn.NLLLoss(outputs, targets)
+        loss = criterion(outputs, targets)
 
         # We compute the gradient of all the model’s weights
         loss.backward()
@@ -145,11 +154,11 @@ def test(epoch):
     total = 0
     for batch_idx, (inputs, targets) in enumerate(testloader):
         net.eval()
-        inputs, targets = inputs.cuda(), targets.cuda()
+        if use_cuda: inputs, targets = inputs.cuda(), targets.cuda()
 
         # Forward pass of the Alrao model
         outputs = net(inputs)
-        loss = nn.NLLLoss(outputs, targets)
+        loss = criterion(outputs, targets)
 
         # Update loss
         test_loss += loss.item()
