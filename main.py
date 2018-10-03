@@ -20,7 +20,7 @@ from tqdm import tqdm
 import numpy as np
 
 from models import *
-from mymodels import LinearClassifier
+from custom_layers import LinearClassifier
 from switch import Switch
 from optim_spec import SGDSwitch, SGDSpec, AdamSpec, AdamSwitch
 from learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
