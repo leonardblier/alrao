@@ -294,22 +294,14 @@ reference="fig:firstepochs"}. Fig. [5](#fig:trig){reference-type="ref"
 reference="fig:trig"} tests the influence of $\eta_{\min}$ and
 $\eta_{\max}$.
 
-\centering
-![GoogLeNet[]{label="fig:firstepochs-googlenet"}](img/learningcurvesGooglenet.eps){#fig:firstepochs-googlenet
-width="\linewidth"}
-
-![MobileNetV2[]{label="fig:firstepochs-mobilenet"}](img/learningcurvesmobilenet.eps){#fig:firstepochs-mobilenet
-width="\linewidth"}
 
 
-  -------------------------- -------- ------------------- ----------------- ------------------- ----------------- ----------------- -------------------
 |  Model                    |        |                   |                 |                   |                 |                 |                  |
 |                           |  LR    |         Loss      |     Acc (%)     |        Loss       |      Acc (%)    |        Loss     |       Acc (%)    |
 |  MobileNet                | $1e$-1 |   $0.37 \pm 0.01$ |  $90.2 \pm 0.3$ |   $1.01 \pm 0.95$ |    $78 \pm 11$  | $0.42 \pm 0.02$ |   $88.1 \pm 0.6$ |
 |  GoogLeNet                | $1e$-2 |   $0.45 \pm 0.05$ |  $89.6 \pm 1.0$ |   $0.47 \pm 0.04$ |  $89.8 \pm 0.4$ | $0.47 \pm 0.03$ |   $88.9 \pm 0.8$ |
 |  VGG19                    | $1e$-1 |   $0.42 \pm 0.02$ |  $89.5 \pm 0.2$ |   $0.43 \pm 0.02$ |  $88.9 \pm 0.4$ | $0.45 \pm 0.03$ |   $87.5 \pm 0.4$ |
 |  LSTM (PTB)               | $1$    | $1.566 \pm 0.003$ |  $66.1 \pm 0.1$ | $1.587 \pm 0.005$ |  $65.6 \pm 0.1$ | $1.67 \pm 0.01$ |   $64.1 \pm 0.2$ |
-  -------------------------- -------- ------------------- ----------------- ------------------- ----------------- ----------------- -------------------
 
   :  Performance of Alrao-SGD, of SGD with optimal learning rate from
   $\{10^{-5}, 10^{-4}, 10^{-3}, 10^{-2}, 10^{-1}, 1., 10.\}$, and of
