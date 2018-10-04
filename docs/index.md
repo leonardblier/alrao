@@ -157,13 +157,19 @@ width="0.48\linewidth"}
 In the classifier layer, we build multiple clones of the original
 classifier layer, set a different learning rate for each, and then use a
 model averaging method from among them. The averaged classifier and the
-overall Alrao model are: $$\label{eq:parall-class}
+overall Alrao model are:
+
+$$
   C^{\text{Alrao}}_{\theta^{\text{cl}}}(z) \mathrel{\mathop{:}}=
-  \sum_{j=1}^{N_{\text{cl}}}a_{j} \, C_{\theta^{\text{cl}}_{j}}(z),
-  \qquad
+  \sum_{j=1}^{N_{\text{cl}}}a_{j} C_{\theta^{\text{cl}}_{j}}(z)
+$$
+
+$$
 \Phi^{\text{Alrao}}_{\theta}(x) \mathrel{\mathop{:}}=
-C^{\text{Alrao}}_{\theta^{\text{cl}}}(\phi_{\theta^{\text{pc}}}(x))$$
-where the $C_{\theta^{\text{cl}}_{j}}$ are copies of the original
+C^{\text{Alrao}}_{\theta^{\text{cl}}}(\phi_{\theta^{\text{pc}}}(x))
+$$
+
+where the $C_{\theta^{\text{cl}}_{j}}$  are copies of the original
 classifier layer, with non-tied parameters, and
 $\theta^{\text{cl}} \mathrel{\mathop{:}}=(\theta^{\text{cl}}_{1}, ...,
 \theta^{\text{cl}}_{N_{\text{cl}}})$. The $a_{j}$ are the parameters
