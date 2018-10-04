@@ -56,8 +56,6 @@ sub-networks whose initialization leads to good convergence.
 All Learning Rates At Once: Description {#sec:idea}
 =======================================
 
-[\[sec:our-method\]]{#sec:our-method label="sec:our-method"}
-
 #### Alrao: principle.
 
 Alrao starts with a standard optimization method such as SGD, and a
@@ -133,19 +131,19 @@ x_{K})_{k} = {e^{x_{k}}}/\left({\sum_{i} e^{x_{i}}}\right).$The
 *pre-classifier* is a computational graph composed of any number of
 *layers*, and each layer is made of multiple *features*.
 
-We denote $\logunif(\cdot ; \eta_{\min}, \eta_{\max})$ the *log-uniform*
+We denote $\log -U(\cdot ; \eta_{\min}, \eta_{\max})$ the *log-uniform*
 probability distribution on an interval $(\eta_{\min}, \eta_{\max})$:
-namely, if $\eta \sim \logunif(\cdot ; \eta_{\min},
+namely, if $\eta \sim \log -U(\cdot ; \eta_{\min},
 \eta_{\max})$, then $\log \eta$ is uniformly distributed between $\log
 \eta_{\min}$ and $\log \eta_{\max}$. Its density function is
 $$\label{eq:logunif}
-  \logunif(\eta; \eta_{\min}, \eta_{\max}) = \frac{\mathbbm{1}_{\eta_{\min} \leq \eta \leq \eta_{\max}}}{\eta_{\max} - \eta_{\min}}\times\frac{1}{\eta}$$
+  \log -U(\eta; \eta_{\min}, \eta_{\max}) = \frac{\mathbbm{1}_{\eta_{\min} \leq \eta \leq \eta_{\max}}}{\eta_{\max} - \eta_{\min}}\times\frac{1}{\eta}$$
 
 #### Alrao for the pre-classifier: A random learning rate for each feature.
 
 In the pre-classifier, for each feature $i$ in each layer $l$, a
 learning rate $\eta_{l,i}$ is sampled from the probability distribution
-$\logunif(.; \eta_{\min}, \eta_{\max})$, once and for all at the
+$\log -U(.; \eta_{\min}, \eta_{\max})$, once and for all at the
 beginning of training.[^4] Then the incoming parameters of each feature
 in the preclassifier are updated in the usual way with this learning
 rate (Eq. [\[eq:updatepc\]](#eq:updatepc){reference-type="ref"
@@ -201,28 +199,6 @@ $\Phi^{\text{Alrao}}_{\theta}(x)$. Only the classifier layer is
 modified, the pre-classifier architecture being unchanged.
 
 #### The Alrao update.
-
-\algsetblock[Name]{Forall}{Stop}{3}{1cm}
-$a_{j} \leftarrow 1/N_{\mathrm{cl}}$ for each
-$1\leq j \leq N_{\mathrm{cl}}$
-
-$\Phi^{\text{Alrao}}_{\theta}(x) :=
-    \sum_{j=1}^{N_{\mathrm{cl}}}a_{j}\,C_{\theta^{\mathrm{cl}}_{j}}(
-    \phi_{\theta^{\mathrm{pc}}}(x))$ Sample
-$\eta_{l,i} \sim \logunif(.; \eta_{\min}, \eta_{\max})$. Define
-$\log \eta_{j} = \log\eta_{\min} + \frac{j-1}{N_{\mathrm{cl}}-1}\log \frac{\eta_{\max}}{\eta_{\min}}$.
-
-\While{Convergence ?}
-$z_{t} \leftarrow \phi_{\theta^{\mathrm{pc}}}(x_{t})$
-$\theta_{l,i} \leftarrow \theta_{l,i} - \eta_{l,i} \cdot \nabla_{\theta_{l,i}}\ell(\Phi^{\text{Alrao}}_{\theta}(x_{t}), y_{t})$
-$\theta^{\mathrm{cl}}_{j} \leftarrow
-        \theta^{\mathrm{cl}}_{j} - \eta_{j}\cdot
-        \nabla_{\theta^{\mathrm{cl}}_{j}} \,
-        \ell(C_{\theta^{\mathrm{cl}}_{j}}(z_{t}), y_{t})$
-
-$a \leftarrow \mathtt{ModelAveraging}(a, (C_{\theta^{\mathrm{cl}}_{i}}(z_{t}))_{i}, y_{t})$
-$t \leftarrow t+1$ mod $N$
-
 Alg. [\[algo:alrao\]](#algo:alrao){reference-type="ref"
 reference="algo:alrao"} presents the full Alrao algorithm for use with
 SGD (other optimizers like Adam are treated similarly). The updates for
@@ -325,11 +301,10 @@ width="\linewidth"}
 ![MobileNetV2[]{label="fig:firstepochs-mobilenet"}](img/learningcurvesmobilenet.eps){#fig:firstepochs-mobilenet
 width="\linewidth"}
 
-\fontsize{7pt}{7pt}
-\selectfont
+
   ------------------------- -------- ------------------- ---------------- ------------------- ---------------- ----------------- ---------------- --
   Model                                                                                                                                           
-  (lr)2-4 (lr)5-6 (lr)7-8   LR              Loss             Acc (%)             Loss             Acc (%)            Loss            Acc (%)      
+                              LR              Loss             Acc (%)             Loss             Acc (%)            Loss            Acc (%)      
   MobileNet                 $1e$-1     $0.37 \pm 0.01$    $90.2 \pm 0.3$    $1.01 \pm 0.95$     $78 \pm 11$     $0.42 \pm 0.02$   $88.1 \pm 0.6$  
   GoogLeNet                 $1e$-2     $0.45 \pm 0.05$    $89.6 \pm 1.0$    $0.47 \pm 0.04$    $89.8 \pm 0.4$   $0.47 \pm 0.03$   $88.9 \pm 0.8$  
   VGG19                     $1e$-1     $0.42 \pm 0.02$    $89.5 \pm 0.2$    $0.43 \pm 0.02$    $88.9 \pm 0.4$   $0.45 \pm 0.03$   $87.5 \pm 0.4$  
@@ -346,7 +321,6 @@ width="\linewidth"}
   times (PTB); the confidence intervals report the standard deviation
   over these runs.
 
--0.1in [\[tab:results\]]{#tab:results label="tab:results"}
 
 \centering
 ![Performance of Alrao with a GoogLeNet model, depending on the interval
@@ -407,8 +381,6 @@ do not use stepsize schedules.
 Limitations, further remarks, and future directions {#sec:discussion}
 ===================================================
 
-[\[sec:strengths-weaknesses\]]{#sec:strengths-weaknesses
-label="sec:strengths-weaknesses"}
 
 #### Increased number of parameters for the classification layer.
 
@@ -477,9 +449,6 @@ that Alrao-Adam performs well as a pure optimization method but
 exacerbates the underlying risk of overfit of Adam
 [@wilson2017marginal; @keskar2017improving].
 
-[\[sec:remarks\]]{#sec:remarks label="sec:remarks"}
-[\[sec:future-directions\]]{#sec:future-directions
-label="sec:future-directions"}
 
 Conclusion {#sec:conclusion}
 ==========
@@ -497,6 +466,3 @@ Acknowledgments {#acknowledgments .unnumbered}
 We would like to thank Corentin Tallec for his technical help, and his
 many remarks and advice. We thank Olivier Teytaud for pointing useful
 references.
-
-\bibliographystyle{abbrv}
-\vfill
