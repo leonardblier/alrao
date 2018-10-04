@@ -169,7 +169,7 @@ $$
 C^{\text{Alrao}}_{\theta^{\text{cl}}}(\phi_{\theta^{\text{pc}}}(x))
 $$
 
-where the $C_{\theta^{\text{cl}}_{j}}$  are copies of the original
+where the $C_{\theta^{\text{cl}}_{j}}$   are copies of the original
 classifier layer, with non-tied parameters, and
 $\theta^{\text{cl}} \mathrel{\mathop{:}}=(\theta^{\text{cl}}_{1}, ...,
 \theta^{\text{cl}}_{N_{\text{cl}}})$. The $a_{j}$ are the parameters
@@ -206,13 +206,11 @@ follows.
 -   The parameters $\theta^{\text{cl}}_j$ of each classifier clone $j$
     on the classifier layer are updated as if this classifier alone was
     the only output of the model:
-    $$
-      \theta^{\text{cl}}_{j} \leftarrow \theta^{\text{cl}}_{j}  - \frac{\eta_{j}}{a_{j}} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(\Phi^{\text{Alrao}}_\theta(x), y)
-    $$
-    $$
-     \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot
-      \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned}
-    $$
+
+    $$ \theta^{\text{cl}}_{j} \leftarrow \theta^{\text{cl}}_{j}  - \frac{\eta_{j}}{a_{j}} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(\Phi^{\text{Alrao}}_\theta(x), y) $$
+
+    $$ \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned} $$
+
     (still sharing the same pre-classifier
     $\phi_{\theta^{\text{pc}}}$). This ensures classifiers with low
     weights $a_j$ still learn, and is consistent with model averaging
