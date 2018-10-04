@@ -113,9 +113,7 @@ $C_{\theta^{\text{c}}}$, namely,
 $\Phi_{\theta}(x)=C_{\theta^{\mathrm{cl}}}(\phi_{\theta^{\text{pc}}}(x))$.
 The classifier layer $C_{\theta^{\text{c}}}$ with $K$ categories is
 defined by $C_{\theta^{\text{c}}} = \text{softmax}\circ\left(W^{T}x +
-b\right)$ with $\theta^{\mathrm{cl}} = (W, b)$, and
-$\text{softmax}(x_{1}, ...,
-x_{K})_{k} = {e^{x_{k}}}/\left({\sum_{i} e^{x_{i}}}\right).$The
+b\right)$ with $\theta^{\mathrm{cl}} = (W, b)$.The
 *pre-classifier* is a computational graph composed of any number of
 *layers*, and each layer is made of multiple *features*.
 
@@ -123,9 +121,7 @@ We denote $\log -U(\cdot ; \eta_{\min}, \eta_{\max})$ the *log-uniform*
 probability distribution on an interval $(\eta_{\min}, \eta_{\max})$:
 namely, if $\eta \sim \log -U(\cdot ; \eta_{\min},
 \eta_{\max})$, then $\log \eta$ is uniformly distributed between $\log
-\eta_{\min}$ and $\log \eta_{\max}$. Its density function is
-$$
-  \log -U(\eta; \eta_{\min}, \eta_{\max}) = \frac{\mathbbm{1}_{\eta_{\min} \leq \eta \leq \eta_{\max}}}{\eta_{\max} - \eta_{\min}}\times\frac{1}{\eta}$$
+\eta_{\min}$ and $\log \eta_{\max}$.
 
 #### Alrao for the pre-classifier: A random learning rate for each feature.
 
