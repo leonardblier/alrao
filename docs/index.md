@@ -281,41 +281,13 @@ Still, even with wide intervals $(\eta_\min, \eta_\max)$, Alrao comes
 reasonably close to the best learning rate, across all setups; hence
 Alrao's possible use as a quick assessment method. Although Adam with
 its default parameters almost matches optimal SGD, this is not always
-the case, for example with the MobileNet model
-(Fig.[4](#fig:firstepochs-mobilenet){reference-type="ref"
-reference="fig:firstepochs-mobilenet"}). This confirms a known risk of
+the case, for example with the MobileNet model. This confirms a known risk of
 overfit with Adam [@wilson2017marginal]. In our setup, Alrao seems to be
 a more stable default method.
-
-Our results, with either SGD, Adam, or SGD-Alrao, are somewhat below the
-art: in part this is because we train on only 40,000 CIFAR samples, and
-do not use stepsize schedules.
 
 Limitations, further remarks, and future directions {#sec:discussion}
 ===================================================
 
-
-#### Increased number of parameters for the classification layer.
-
-Alrao modifies the output layer of the optimized model. The number of
-parameters for the classification layer is multiplied by the number of
-classifier copies used (the number of parameters in the pre-classifier
-is unchanged). On CIFAR10 (10 classes), the number of parameters
-increased by less than 5% for the models used. On Penn Treebank, the
-number of parameters increased by $15\%$ in our setup (working at the
-character level); working at word level it would have increased
-threefold (Appendix [9](#sec:number-parameters){reference-type="ref"
-reference="sec:number-parameters"}).
-
-This is clearly a limitation for models with most parameters in the
-classifier layer. For output-layer-heavy models, this can be mitigated
-by handling the copies of the classifiers on distinct computing units:
-in Alrao these copies work in parallel given the pre-classifier.
-
-Still, models dealing with a very large number of output classes usually
-rely on other parameterizations than a direct softmax, such as a
-hierarchical softmax (see references in [@jozefowicz2016exploring]);
-Alrao could be used in conjunction with such methods.
 
 #### Adding two hyperparameters.
 
