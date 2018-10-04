@@ -35,7 +35,7 @@ with a wide set of architecture.
 
 
 
-### Motivation.
+## Motivation.
 
 Alrao was inspired by the intuition that not all units in a neural
 network end up being useful. Hopefully, in a large enough network, a
@@ -56,7 +56,7 @@ sub-networks whose initialization leads to good convergence.
 
 # All Learning Rates At Once: Description
 
-#### Alrao: principle.
+## Alrao: principle.
 
 Alrao starts with a standard optimization method such as SGD, and a
 range of possible learning rates $(\eta_{\min}, \eta_{\max})$. Instead
@@ -110,10 +110,10 @@ A deep learning model for classification $\Phi_{\theta}$ is made of two
 parts: a *pre-classifier* $\phi_{\theta^{\text{pc}}}$ which computes
 some quantities fed to a final *classifier layer*
 $C_{\theta^{\text{c}}}$, namely,
-$\Phi_{\theta}(x)=C_{\theta^{\mathrm{cl}}}(\phi_{\theta^{\text{pc}}}(x))$.
+$\Phi_{\theta}(x)=C_{\theta^{\text{cl}}}(\phi_{\theta^{\text{pc}}}(x))$.
 The classifier layer $C_{\theta^{\text{c}}}$ with $K$ categories is
 defined by $C_{\theta^{\text{c}}} = \text{softmax}\circ\left(W^{T}x +
-b\right)$ with $\theta^{\mathrm{cl}} = (W, b)$.The
+b\right)$ with $\theta^{\text{cl}} = (W, b)$.The
 *pre-classifier* is a computational graph composed of any number of
 *layers*, and each layer is made of multiple *features*.
 
@@ -158,23 +158,23 @@ In the classifier layer, we build multiple clones of the original
 classifier layer, set a different learning rate for each, and then use a
 model averaging method from among them. The averaged classifier and the
 overall Alrao model are: $$\label{eq:parall-class}
-  C^{\text{Alrao}}_{\theta^{\mathrm{cl}}}(z) \mathrel{\mathop{:}}=
-  \sum_{j=1}^{N_{\mathrm{cl}}}a_{j} \, C_{\theta^{\mathrm{cl}}_{j}}(z),
+  C^{\text{Alrao}}_{\theta^{\text{cl}}}(z) \mathrel{\mathop{:}}=
+  \sum_{j=1}^{N_{\text{cl}}}a_{j} \, C_{\theta^{\text{cl}}_{j}}(z),
   \qquad
 \Phi^{\text{Alrao}}_{\theta}(x) \mathrel{\mathop{:}}=
-C^{\text{Alrao}}_{\theta^{\mathrm{cl}}}(\phi_{\theta^{\text{pc}}}(x))$$
-where the $C_{\theta^{\mathrm{cl}}_{j}}$ are copies of the original
+C^{\text{Alrao}}_{\theta^{\text{cl}}}(\phi_{\theta^{\text{pc}}}(x))$$
+where the $C_{\theta^{\text{cl}}_{j}}$ are copies of the original
 classifier layer, with non-tied parameters, and
-$\theta^{\mathrm{cl}} \mathrel{\mathop{:}}=(\theta^{\mathrm{cl}}_{1}, ...,
-\theta^{\mathrm{cl}}_{N_{\mathrm{cl}}})$. The $a_{j}$ are the parameters
+$\theta^{\text{cl}} \mathrel{\mathop{:}}=(\theta^{\text{cl}}_{1}, ...,
+\theta^{\text{cl}}_{N_{\text{cl}}})$. The $a_{j}$ are the parameters
 of the model averaging, and are such that for all $j$,
 $0 \leq a_{j} \leq 1$, and $\sum_{j}a_{j} = 1$. These are not updated by
 gradient descent, but via a model averaging method from the literature
 (see below).
 
-For each classifier $C_{\theta^{\mathrm{cl}}_{j}}$, we set a learning
+For each classifier $C_{\theta^{\text{cl}}_{j}}$, we set a learning
 rate $\log \eta_{j} = \log \eta_{\min} +
-\frac{j-1}{N_{\mathrm{cl}}-1}\log(\eta_{\max}/ \eta_{\min})$, so that
+\frac{j-1}{N_{\text{cl}}-1}\log(\eta_{\max}/ \eta_{\min})$, so that
 the classifiers' learning rates are log-uniformly spread on the interval
 $(\eta_{\min}, \eta_{\max})$.
 
@@ -194,21 +194,21 @@ follows.
     its incoming parameters are updated as: $$\label{eq:updatepc}
       \theta_{l,i} \leftarrow \theta_{l,i} - \eta_{l,i} \cdot \nabla_{\theta_{l,i}}\ell(\Phi^{\text{Alrao}}_\theta(x), y)$$
 
--   The parameters $\theta^{\mathrm{cl}}_j$ of each classifier clone $j$
+-   The parameters $\theta^{\text{cl}}_j$ of each classifier clone $j$
     on the classifier layer are updated as if this classifier alone was
     the only output of the model: $$\begin{aligned}
         \label{eq:updatec}
-      \theta^{\mathrm{cl}}_{j} \leftarrow & \;
-    %   \theta^{\mathrm{cl}}_{j}  - \frac{\eta_{j}}{a_{j}} \cdot \nabla_{\theta^{\mathrm{cl}}_{j}}\,\ell(\Phi^{\text{Alrao}}_\theta(x), y)
+      \theta^{\text{cl}}_{j} \leftarrow & \;
+    %   \theta^{\text{cl}}_{j}  - \frac{\eta_{j}}{a_{j}} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(\Phi^{\text{Alrao}}_\theta(x), y)
     %   \\
     %   =&\;
-      \theta^{\mathrm{cl}}_{j}  - \eta_{j} \cdot
-      \nabla_{\theta^{\mathrm{cl}}_{j}}\,\ell(C_{\theta^{\mathrm{cl}}_{j}}(\phi_{\theta^{\mathrm{pc}}}(x)), y)\end{aligned}$$
+      \theta^{\text{cl}}_{j}  - \eta_{j} \cdot
+      \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned}$$
     (still sharing the same pre-classifier
-    $\phi_{\theta^{\mathrm{pc}}}$). This ensures classifiers with low
+    $\phi_{\theta^{\text{pc}}}$). This ensures classifiers with low
     weights $a_j$ still learn, and is consistent with model averaging
     philosophy. Algorithmically this requires differentiating the loss
-    $N_{\mathrm{cl}}$ times with respect to the last layer (but no
+    $N_{\text{cl}}$ times with respect to the last layer (but no
     additional backpropagations through the preclassifier).
 
 -   To set the weights $a_j$, several model averaging techniques are
@@ -319,8 +319,7 @@ exacerbates the underlying risk of overfit of Adam
 [@wilson2017marginal; @keskar2017improving].
 
 
-Conclusion {#sec:conclusion}
-==========
+# Conclusion
 
 Applying stochastic gradient descent with random learning rates for
 different features is surprisingly resilient in our experiments, and
@@ -329,8 +328,7 @@ as soon as the range of random learning rates contains a suitable one.
 This could save time when testing deep learning models, opening the door
 to more out-of-the-box uses of deep learning.
 
-Acknowledgments {#acknowledgments .unnumbered}
-===============
+# Acknowledgments
 
 We would like to thank Corentin Tallec for his technical help, and his
 many remarks and advice. We thank Olivier Teytaud for pointing useful
