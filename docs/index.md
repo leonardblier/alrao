@@ -160,7 +160,7 @@ $0 \leq a_{j} \leq 1$, and $\sum_{j}a_{j} = 1$. These are not updated by
 gradient descent, but via a model averaging method from the literature
 (see below).
 
-![Before Alrao](img/beforealrao.png){:height="50%" width="50%"}   ![With Alrao](img/newalrao.png){:height="50%" width="50%"}
+![Before Alrao](img/beforealrao.png){:height="45%" width="45%"}   ![With Alrao](img/newalrao.png){:height="45%" width="45%"}
 
 
 For each classifier $C_{\theta^{\text{cl}}_{j}}$, we set a learning
