@@ -241,58 +241,26 @@ follows.
     Appendix [7](#sec:posterior){reference-type="ref"
     reference="sec:posterior"}.
 
-Experiments {#sec:experiments}
+Experiments
 ===========
 
-We tested Alrao on various convolutional networks for image
-classification (CIFAR10), and on LSTMs for text prediction. The
-baselines are SGD with an optimal learning rate, and Adam with its
-default setting, arguably the current default method
-[@wilson2017marginal].
-
-#### Image classification on CIFAR10. {#sec:cifar10}
-
-For image classification, we used the CIFAR10 dataset [@Krizhevsky2009].
-It is made of 50,000 training and 10,000 testing data; we split the
-training set into a smaller training set with 40,000 samples, and a
-validation set with 10,000 samples. For each architecture, training on
-the smaller training set was stopped when the validation loss had not
-improved for 20 epochs. The epoch with best validation loss was selected
-and the corresponding model tested on the test set. The inputs are
-normalized. Training used data augmentation (random cropping and random
-horizontal flipping). The batch size is always 32. Each setting was run
-10 times: the confidence intervals presented are the standard deviation
-over these runs.
-
-We tested Alrao on three architectures known to perform well on this
-task: GoogLeNet [@szegedy2015going], VGG19 [@Simonyan14c] and MobileNet
-[@howard2017mobilenets]. The exact implementation for each can be found
-in our code.
-
+For image classification, we used the CIFAR10 dataset.
 The Alrao learning rates were sampled log-uniformly from
-$\eta_{\min} = 10^{-5}$ to $\eta_{\max} = 10$. For the output layer we
-used 10 classifiers with switch model averaging
-(Appendix [6](#sec:switch){reference-type="ref"
-reference="sec:switch"}); the learning rates of the output classifiers
-are deterministic and log-uniformly spread in
-$[\eta_{\min},\eta_{\max}]$.
-
-In addition, each model was trained with SGD for every learning rate in
-the set
-$\{10^{-5},\linebreak[1] 10^{-4},\linebreak[1] 10^{-3},\linebreak[1] 10^{-2},\linebreak[1] 10^{-1},\linebreak[1] 1.,\linebreak[1] 10.$$\}$.
-The best SGD learning rate is selected on the validation set, then
-reported in Table [\[tab:results\]](#tab:results){reference-type="ref"
-reference="tab:results"}. We also compare to Adam with its default
+$\eta_{\min} = 10^{-5}$ to $\eta_{\max} = 10$.
+We compare these results to the same models trained with SGD for every learning rate in
+the set $\{10^{-5},10^{-4},10^{-3},10^{-2}, 10^{-1}, 1., 10.\}$.
+We also compare to Adam with its default
 hyperparameters ($\eta=10^{-3}, \beta_1 = 0.9, \beta_2 = 0.999$).
 
-The results are presented in
-Table [\[tab:results\]](#tab:results){reference-type="ref"
-reference="tab:results"}. Learning curves with various SGD learning
-rates, with Adam, and with Alrao are presented in
-Fig. [\[fig:firstepochs\]](#fig:firstepochs){reference-type="ref"
-reference="fig:firstepochs"}. Fig. [5](#fig:trig){reference-type="ref"
-reference="fig:trig"} tests the influence of $\eta_{\min}$ and
-$\eta_{\max}$.
+To test Alrao on a different kind of architecture, we used a LSTM [@hochreiter1997long]
+neural network for character prediction on the Penn Treebank [@Marcus1993]
+dataset. The experimental procedure is the same, with
+$(\eta_{\min}, \eta_{\max}) =
+(0.001, 100)$. The loss is given in bits per character (BPC)
+and the accuracy is the proportion of correct character predictions.
+
+More details on these experiments can be found in the paper.
+
 
 
 
@@ -303,55 +271,8 @@ $\eta_{\max}$.
 |  VGG19                    | $1e$-1 |   $0.42 \pm 0.02$ |  $89.5 \pm 0.2$ |   $0.43 \pm 0.02$ |  $88.9 \pm 0.4$ | $0.45 \pm 0.03$ |   $87.5 \pm 0.4$ |
 |  LSTM (PTB)               | $1$    | $1.566 \pm 0.003$ |  $66.1 \pm 0.1$ | $1.587 \pm 0.005$ |  $65.6 \pm 0.1$ | $1.67 \pm 0.01$ |   $64.1 \pm 0.2$ |
 
-  :  Performance of Alrao-SGD, of SGD with optimal learning rate from
-  $\{10^{-5}, 10^{-4}, 10^{-3}, 10^{-2}, 10^{-1}, 1., 10.\}$, and of
-  Adam with its default setting. Three convolutional models are reported
-  for image classifaction (CIFAR10) and one recurrent model for
-  character prediction (Penn Treebank). For Alrao the learning rates lie
-  in $[\eta_{\min};\eta_{\max}] = [10^{-5};10]$ (CIFAR10) or
-  $[10^{-3};10^2]$ (PTB). Each experiment is run 10 times (CIFAR10) or 5
-  times (PTB); the confidence intervals report the standard deviation
-  over these runs.
 
 
-\centering
-![Performance of Alrao with a GoogLeNet model, depending on the interval
-$(\eta_\min, \eta_\max)$. Left: loss on the train set; right: on the
-test set. Each point with coordinates $(\eta_\min, \eta_\max)$ above the
-diagonal represents the loss after 30 epochs for Alrao with this
-interval. Points $(\eta, \eta)$ on the diagonal represent standard SGD
-with learning rate $\eta$ after 50 epochs. Standard SGD with
-$\eta = 10^2$ is left blank to due numerical divergence (NaN). Alrao
-works as soon as $(\eta_\min, \eta_\max)$ contains at least one suitable
-learning rate.[]{label="fig:trig"}](img/triangle.eps){#fig:trig
-width="\linewidth"}
-
-#### Recurrent learning on Penn Treebank. {#sec:penn-tree-bank}
-
-To test Alrao on a different kind of architecture, we used a recurrent
-neural network for text prediction on the Penn Treebank [@Marcus1993]
-dataset. The experimental procedure is the same, with
-$(\eta_{\min}, \eta_{\max}) =
-(0.001, 100)$ and $6$ output classifiers for Alrao. The results appear
-in Table [\[tab:results\]](#tab:results){reference-type="ref"
-reference="tab:results"}, where the loss is given in bits per character
-and the accuracy is the proportion of correct character predictions.
-
-The model was trained for *character* prediction rather than word
-prediction. This is technically easier for Alrao implementation: since
-Alrao uses copies of the output layer, memory issues arise for models
-with most parameters on the output layer. Word prediction (10,000
-classes on PTB) requires more output parameters than character
-prediction; see Section [4](#sec:discussion){reference-type="ref"
-reference="sec:discussion"} and
-Appendix [9](#sec:number-parameters){reference-type="ref"
-reference="sec:number-parameters"}.
-
-The model is a two-layer LSTM [@hochreiter1997long] with an embedding
-size of 100 and with 100 hidden features. A dropout layer with rate
-$0.2$ is included before the decoder. The training set is divided into
-20 minibatchs. Gradients are computed via truncated backprop through
-time [@werbos1990backpropagation] with truncation every 70 characters.
 
 #### Comments.
 
