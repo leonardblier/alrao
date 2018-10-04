@@ -151,10 +151,10 @@ $$
 C^{\text{Alrao}}_{\theta^{\text{cl}}}(\phi_{\theta^{\text{pc}}}(x))
 $$
 
-where the $C_{\theta^{\text{cl}}_{j}}$   are copies of the original
+where the $$C_{\theta^{\text{cl}}_{j}}$$   are copies of the original
 classifier layer, with non-tied parameters, and
-$\theta^{\text{cl}} \mathrel{\mathop{:}}=(\theta^{\text{cl}}_{1}, ...,
-\theta^{\text{cl}}_{N_{\text{cl}}})$. The $a_{j}$ are the parameters
+$$\theta^{\text{cl}} \mathrel{\mathop{:}}=(\theta^{\text{cl}}_{1}, ...,
+\theta^{\text{cl}}_{N_{\text{cl}}})$$. The $a_{j}$ are the parameters
 of the model averaging, and are such that for all $j$,
 $0 \leq a_{j} \leq 1$, and $\sum_{j}a_{j} = 1$. These are not updated by
 gradient descent, but via a model averaging method from the literature
