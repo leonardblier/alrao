@@ -1,21 +1,23 @@
 # Learning with Random Learning Rates
 
-Authors' implementation of "Learning with Random Learning Rates" (2018) in PyTorch (0.4 and higher).
+Authors' implementation of "Learning with Random Learning Rates" (2018) in PyTorch.
 
 Paper: https://arxiv.org/abs/1810.01322.
 
 Authors: Léonard Blier, Pierre Wolinski, Yann Ollivier.
 
 ## Requirements
-The requirements are
-* pytorch (0.4 and hight)
+The requirements are:
+* pytorch (0.4 and higher)
 * numpy, scipy
 * tqdm
 
 ## Tutorial
+
 A tutorial on how to use Alrao with custom models is in `tutorial.ipynb`.
 
 ## Sample script for using Alrao with convolutional models on CIFAR10
+
 The script `main_cnn.py` trains convolutional neural networks on CIFAR10.
 
 The main options are:
@@ -33,7 +35,7 @@ The main options are:
   --nb_class NB_CLASS   number of classifiers used in Alrao (default 10)
 ```
 More options are available. Check it by running `python main_cnn.py --help`.
-For example, to use the script with Alrao on the interval (10**-5, 10) with GoogLeNet, run :
+For example, to use the script with Alrao on the interval (10**-5, 10) with GoogLeNet, run:
 ```
 python main_cnn.py --use_alrao --minLR -5 --maxLR 1 --nb_class 10 --model_name GoogLeNet
 ```
@@ -46,36 +48,17 @@ python main_cnn.py --lr 0.001 --model_name GoogLeNet
 The available models are VGG19, GoogLeNet, MobileNetV2, SENet18.
 
 ## Sample script for using Alrao with recurrent models on PTB
-The script `main_rnn.py` trains a recurrent neural networks on PTB with a LSTM.
 
-The main options are:
+The script `main_rnn.py` trains a recurrent neural networks on PTB with a LSTM. By default, the LSTM is trained for word prediction with a backpropagation through time (bptt) of 35. The setup given in the paper is obtained with the following options:
 ```
---no-cuda             disable cuda
---epochs EPOCHS       number of epochs for phase 1 (default: 50)
---optimizer OPTIMIZER
-                      optimizer (default: SGD) {Adam, SGD}
---lr LR               learning rate, when used without alrao
---use_alrao           multiple learning rates
---minlr MINLR         minimum LR in alrao (eta_min)
---maxlr MAXLR         maximum LR in alrao (eta_max)
---nb_class NB_CLASS   number of classifiers before the switch
+python main_rnn.py --char_prediction --bptt=70
 ```
 
-More options are available. Check it by running `python main_rnn.py --help`.
+Options given in the previous section are also available, as well as LSTM specific options (number of layers, size of the embedding, etc.). Check it by running `python main_rnn.py --help`.
 
-For example, to use the script with Alrao on the interval (10**-3, 100) with GoogLeNet, run :
-```
-python main_rnn.py --use_alrao --minLR -3 --maxLR 2 --nb_class 10
-```
+Note: in the code, the loss is computed with the natural logarithm, and not with the binary logarithm as mentioned in the paper. Thus, a conversion is necessary.
 
-If you want to train the same model but with SGD with a learning rate 10**-1, run:
-```
-python main_cnn.py --lr 0.1
-```
-
-
-
-## More details on how to use Alrao on custom models
+## How to use Alrao on custom models
 
 
 ### Custom models

@@ -226,7 +226,7 @@ def train(epoch):
         pbar.update(args.bptt)
         postfix = OrderedDict([("LossTrain", "{:.4f}".format(total_loss/(batch_idx+1))),
                                ("AccTrain", "{:.3f}".format(100.*correct/total_pred))])
-
+        postfix["PostSw"] = net.repr_posterior()
         pbar.set_postfix(postfix)
 
         if args.use_alrao:
