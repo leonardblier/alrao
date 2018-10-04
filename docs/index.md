@@ -91,7 +91,7 @@ several learning rate values, and use a (Bayesian) model averaging
 method to obtain the overall network output
 
 
-### Definitions and notation. {#sec:notations}
+## Definitions and notation.
 
 We now describe Alrao more precisely for deep learning models with
 softmax output, on classification tasks (the case of regression is
@@ -188,7 +188,7 @@ The updates for the pre-classifier, classifier, and model averaging weights are 
     on the classifier layer are updated as if this classifier alone was
     the only output of the model:
 
-    $$ \theta^{\text{cl}}_{j} \leftarrow  \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)$$
+    $$ \theta^{\text{cl}}_{j} \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)$$
 
     (still sharing the same pre-classifier
     $\phi_{\theta^{\text{pc}}}$). This ensures classifiers with low
@@ -201,15 +201,7 @@ The updates for the pre-classifier, classifier, and model averaging weights are 
     available, such as Bayesian Model Averaging [@Wasserman2000]. We
     decided to use the *Switch* model averaging [@VanErven2011], a
     Bayesian method which is both simple, principled and very responsive
-    to changes in performance of the various models. After each sample
-    or mini-batch, the switch computes a modified posterior distribution
-    $(a_j)$ over the classifiers. This computation is directly taken
-    from [@VanErven2011] and explained in
-    Appendix [6](#sec:switch){reference-type="ref"
-    reference="sec:switch"}. The observed evolution of this posterior
-    during training is commented in
-    Appendix [7](#sec:posterior){reference-type="ref"
-    reference="sec:posterior"}.
+    to changes in performance of the various models.
 
 Experiments
 ===========
