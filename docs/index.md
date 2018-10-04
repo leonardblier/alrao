@@ -91,7 +91,7 @@ several learning rate values, and use a (Bayesian) model averaging
 method to obtain the overall network output
 
 
-#### Definitions and notation. {#sec:notations}
+### Definitions and notation. {#sec:notations}
 
 We now describe Alrao more precisely for deep learning models with
 softmax output, on classification tasks (the case of regression is
@@ -133,7 +133,6 @@ in the preclassifier are updated in the usual way with this learning
 rate (Eq. [\[eq:updatepc\]](#eq:updatepc){reference-type="ref"
 reference="eq:updatepc"}).
 
-\centering
 ![Left: a standard fully connected neural network for a classification
 task with three classes, made of a pre-classifier and a classifier
 layer. Right: Alrao version of the same network. The single classifier
@@ -141,7 +140,7 @@ layer is replaced with a set of parallel copies of the original
 classifier, averaged with a model averaging method. Each unit uses its
 own learning rate for its incoming weights (represented by different
 styles of
-arrows).](../img/beforealrao.png "fig:")
+arrows).](img/beforealrao.png)
 
  ![Left: a standard fully connected neural
 network for a classification task with three classes, made of a
@@ -150,7 +149,7 @@ network. The single classifier layer is replaced with a set of parallel
 copies of the original classifier, averaged with a model averaging
 method. Each unit uses its own learning rate for its incoming weights
 (represented by different styles of
-arrows).](../img/newalrao.png)
+arrows).](img/newalrao.png)
 
 #### Alrao for the classifier layer: Model averaging from classifiers with different learning rates. {#sec:parall-class}
 
