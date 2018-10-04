@@ -29,10 +29,10 @@ be possible to select a subset of promising architectures based on
 Alrao, and search for the best learning rate on those architectures,
 fine-tuning with any optimizer.
 
-Alrao increases the size of a model on the output layer, but not on the
-internal layers: this usually adds little computational cost unless most
-parameters occur on the output layer. This text comes along with a
-Pytorch implementation usable on a wide set of architectures.
+The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
+
+Our Pytorch implementation is here : [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
+with a wide set of architecture.
 
 #### Motivation.
 
