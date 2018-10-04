@@ -30,7 +30,7 @@ fine-tuning with any optimizer.
 
 The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
 
-Our Pytorch implementation is here : [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
+Our Pytorch implementation is here: [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
 with a wide set of architecture.
 
 
