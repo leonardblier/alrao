@@ -174,11 +174,7 @@ $\Phi^{\text{Alrao}}_{\theta}(x)$. Only the classifier layer is
 modified, the pre-classifier architecture being unchanged.
 
 #### The Alrao update.
-Alg. [\[algo:alrao\]](#algo:alrao){reference-type="ref"
-reference="algo:alrao"} presents the full Alrao algorithm for use with
-SGD (other optimizers like Adam are treated similarly). The updates for
-the pre-classifier, classifier, and model averaging weights are as
-follows.
+The updates for the pre-classifier, classifier, and model averaging weights are as follows.
 
 -   The update rule for the pre-classifier is the usual SGD one, with
     per-feature learning rates. For each feature $i$ in each layer $l$,
@@ -192,7 +188,7 @@ follows.
     on the classifier layer are updated as if this classifier alone was
     the only output of the model:
 
-    $$ \theta^{\text{cl}}_{j} \leftarrow  \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned} $$
+    $$ \theta^{\text{cl}}_{j} \leftarrow  \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)$$
 
     (still sharing the same pre-classifier
     $\phi_{\theta^{\text{pc}}}$). This ensures classifiers with low
