@@ -30,7 +30,7 @@ fine-tuning with any optimizer.
 
 The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
 
-Our Pytorch implementation is here: [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
+Our Pytorch implementation is here : [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
 with a wide set of architecture.
 
 
@@ -141,7 +141,7 @@ layer is replaced with a set of parallel copies of the original
 classifier, averaged with a model averaging method. Each unit uses its
 own learning rate for its incoming weights (represented by different
 styles of
-arrows).[]{label="fig:archi"}](../img/beforealrao.png "fig:")
+arrows).](../img/beforealrao.png "fig:")
 
  ![Left: a standard fully connected neural
 network for a classification task with three classes, made of a
@@ -150,7 +150,7 @@ network. The single classifier layer is replaced with a set of parallel
 copies of the original classifier, averaged with a model averaging
 method. Each unit uses its own learning rate for its incoming weights
 (represented by different styles of
-arrows).[]{label="fig:archi"}](../img/newalrao.png)
+arrows).](../img/newalrao.png)
 
 #### Alrao for the classifier layer: Model averaging from classifiers with different learning rates. {#sec:parall-class}
 
@@ -207,7 +207,7 @@ follows.
     on the classifier layer are updated as if this classifier alone was
     the only output of the model:
 
-    $$ \theta^{\text{cl}}_{j} \leftarrow  \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y) $$
+    $$ \theta^{\text{cl}}_{j} \leftarrow  \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned} $$
 
     (still sharing the same pre-classifier
     $\phi_{\theta^{\text{pc}}}$). This ensures classifiers with low
@@ -336,5 +336,6 @@ to more out-of-the-box uses of deep learning.
 # Acknowledgments
 
 We would like to thank Corentin Tallec for his technical help, and his
-many remarks and advice, as well as Guillaume Charpiat. We thank Olivier Teytaud for pointing useful
+many remarks and advice. We thank Olivier Teytaud for pointing useful
 references.
+                 
