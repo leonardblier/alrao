@@ -141,16 +141,16 @@ layer is replaced with a set of parallel copies of the original
 classifier, averaged with a model averaging method. Each unit uses its
 own learning rate for its incoming weights (represented by different
 styles of
-arrows).[]{label="fig:archi"}](img/beforealrao.eps "fig:"){#fig:archi
-width="0.48\linewidth"} ![Left: a standard fully connected neural
+arrows).[]{label="fig:archi"}](../img/beforealrao.png "fig:")
+
+ ![Left: a standard fully connected neural
 network for a classification task with three classes, made of a
 pre-classifier and a classifier layer. Right: Alrao version of the same
 network. The single classifier layer is replaced with a set of parallel
 copies of the original classifier, averaged with a model averaging
 method. Each unit uses its own learning rate for its incoming weights
 (represented by different styles of
-arrows).[]{label="fig:archi"}](img/newalrao.eps "fig:"){#fig:archi
-width="0.48\linewidth"}
+arrows).[]{label="fig:archi"}](../img/newalrao.png)
 
 #### Alrao for the classifier layer: Model averaging from classifiers with different learning rates. {#sec:parall-class}
 
