@@ -296,7 +296,7 @@ $\eta_{\max}$.
 
 
 
-|  Model                    |        |                   |                 |                   |                 |                 |                  |
+|  Model                    |        SGD Optimal                                    |                   |                 |                 |                  |
 |                           |  LR    |         Loss      |     Acc (%)     |        Loss       |      Acc (%)    |        Loss     |       Acc (%)    |
 |  MobileNet                | $1e$-1 |   $0.37 \pm 0.01$ |  $90.2 \pm 0.3$ |   $1.01 \pm 0.95$ |    $78 \pm 11$  | $0.42 \pm 0.02$ |   $88.1 \pm 0.6$ |
 |  GoogLeNet                | $1e$-2 |   $0.45 \pm 0.05$ |  $89.6 \pm 1.0$ |   $0.47 \pm 0.04$ |  $89.8 \pm 0.4$ | $0.47 \pm 0.03$ |   $88.9 \pm 0.8$ |
