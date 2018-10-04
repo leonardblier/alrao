@@ -197,19 +197,22 @@ follows.
 
 -   The update rule for the pre-classifier is the usual SGD one, with
     per-feature learning rates. For each feature $i$ in each layer $l$,
-    its incoming parameters are updated as: $$\label{eq:updatepc}
-      \theta_{l,i} \leftarrow \theta_{l,i} - \eta_{l,i} \cdot \nabla_{\theta_{l,i}}\ell(\Phi^{\text{Alrao}}_\theta(x), y)$$
+    its incoming parameters are updated as:
+
+    $$
+      \theta_{l,i} \leftarrow \theta_{l,i} - \eta_{l,i} \cdot \nabla_{\theta_{l,i}}\ell(\Phi^{\text{Alrao}}_\theta(x), y)
+    $$
 
 -   The parameters $\theta^{\text{cl}}_j$ of each classifier clone $j$
     on the classifier layer are updated as if this classifier alone was
-    the only output of the model: $$\begin{aligned}
-        \label{eq:updatec}
-      \theta^{\text{cl}}_{j} \leftarrow & \;
-    %   \theta^{\text{cl}}_{j}  - \frac{\eta_{j}}{a_{j}} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(\Phi^{\text{Alrao}}_\theta(x), y)
-    %   \\
-    %   =&\;
-      \theta^{\text{cl}}_{j}  - \eta_{j} \cdot
-      \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned}$$
+    the only output of the model:
+    $$
+      \theta^{\text{cl}}_{j} \leftarrow \theta^{\text{cl}}_{j}  - \frac{\eta_{j}}{a_{j}} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(\Phi^{\text{Alrao}}_\theta(x), y)
+    $$
+    $$
+     \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot
+      \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned}
+    $$
     (still sharing the same pre-classifier
     $\phi_{\theta^{\text{pc}}}$). This ensures classifiers with low
     weights $a_j$ still learn, and is consistent with model averaging
