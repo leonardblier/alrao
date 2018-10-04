@@ -207,9 +207,7 @@ follows.
     on the classifier layer are updated as if this classifier alone was
     the only output of the model:
 
-    $$ \theta^{\text{cl}}_{j} \leftarrow \theta^{\text{cl}}_{j}  - \frac{\eta_{j}}{a_{j}} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(\Phi^{\text{Alrao}}_\theta(x), y) $$
-
-    $$ \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned} $$
+    $$ \theta^{\text{cl}}_{j} \leftarrow  \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned} $$
 
     (still sharing the same pre-classifier
     $\phi_{\theta^{\text{pc}}}$). This ensures classifiers with low
