@@ -133,7 +133,6 @@ in the preclassifier are updated in the usual way with this learning
 rate (Eq. [\[eq:updatepc\]](#eq:updatepc){reference-type="ref"
 reference="eq:updatepc"}).
 
-![Before Alrao](img/beforealrao.png){:height="50%" width="50%"}   ![With Alrao](img/newalrao.png){:height="50%" width="50%"}
 
 #### Alrao for the classifier layer: Model averaging from classifiers with different learning rates. {#sec:parall-class}
 
@@ -160,6 +159,9 @@ of the model averaging, and are such that for all $j$,
 $0 \leq a_{j} \leq 1$, and $\sum_{j}a_{j} = 1$. These are not updated by
 gradient descent, but via a model averaging method from the literature
 (see below).
+
+![Before Alrao](img/beforealrao.png){:height="50%" width="50%"}   ![With Alrao](img/newalrao.png){:height="50%" width="50%"}
+
 
 For each classifier $C_{\theta^{\text{cl}}_{j}}$, we set a learning
 rate $\log \eta_{j} = \log \eta_{\min} +
