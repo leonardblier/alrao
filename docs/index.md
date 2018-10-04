@@ -30,7 +30,7 @@ fine-tuning with any optimizer.
 
 The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
 
-Our Pytorch implementation is here : [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
+Our Pytorch implementation is here: [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
 with a wide set of architecture.
 
 
@@ -207,7 +207,7 @@ follows.
     on the classifier layer are updated as if this classifier alone was
     the only output of the model:
 
-    $$ \theta^{\text{cl}}_{j} \leftarrow  \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y)\end{aligned} $$
+    $$ \theta^{\text{cl}}_{j} \leftarrow  \leftarrow \theta^{\text{cl}}_{j}  - \eta_{j} \cdot \nabla_{\theta^{\text{cl}}_{j}}\,\ell(C_{\theta^{\text{cl}}_{j}}(\phi_{\theta^{\text{pc}}}(x)), y) $$
 
     (still sharing the same pre-classifier
     $\phi_{\theta^{\text{pc}}}$). This ensures classifiers with low
@@ -336,5 +336,5 @@ to more out-of-the-box uses of deep learning.
 # Acknowledgments
 
 We would like to thank Corentin Tallec for his technical help, and his
-many remarks and advice. We thank Olivier Teytaud for pointing useful
+many remarks and advice, as well as Guillaume Charpiat. We thank Olivier Teytaud for pointing useful
 references.
