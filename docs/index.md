@@ -336,5 +336,5 @@ to more out-of-the-box uses of deep learning.
 # Acknowledgments
 
 We would like to thank Corentin Tallec for his technical help, and his
-many remarks and advice. We thank Olivier Teytaud for pointing useful
+many remarks and advice, as well as Guillaume Charpiat. We thank Olivier Teytaud for pointing useful
 references.
