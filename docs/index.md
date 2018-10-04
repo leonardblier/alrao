@@ -133,9 +133,7 @@ in the preclassifier are updated in the usual way with this learning
 rate (Eq. [\[eq:updatepc\]](#eq:updatepc){reference-type="ref"
 reference="eq:updatepc"}).
 
-![Before Alrao](img/beforealrao.png)
-
-![With Alrao](img/newalrao.png)
+![Before Alrao](img/beforealrao. =300x) ![With Alrao](img/newalrao.png =300x)
 
 #### Alrao for the classifier layer: Model averaging from classifiers with different learning rates. {#sec:parall-class}
 
