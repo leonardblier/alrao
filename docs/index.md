@@ -133,23 +133,9 @@ in the preclassifier are updated in the usual way with this learning
 rate (Eq. [\[eq:updatepc\]](#eq:updatepc){reference-type="ref"
 reference="eq:updatepc"}).
 
-![Left: a standard fully connected neural network for a classification
-task with three classes, made of a pre-classifier and a classifier
-layer. Right: Alrao version of the same network. The single classifier
-layer is replaced with a set of parallel copies of the original
-classifier, averaged with a model averaging method. Each unit uses its
-own learning rate for its incoming weights (represented by different
-styles of
-arrows).](img/beforealrao.png)
+![Before Alrao](img/beforealrao.png)
 
- ![Left: a standard fully connected neural
-network for a classification task with three classes, made of a
-pre-classifier and a classifier layer. Right: Alrao version of the same
-network. The single classifier layer is replaced with a set of parallel
-copies of the original classifier, averaged with a model averaging
-method. Each unit uses its own learning rate for its incoming weights
-(represented by different styles of
-arrows).](img/newalrao.png)
+![With Alrao](img/newalrao.png)
 
 #### Alrao for the classifier layer: Model averaging from classifiers with different learning rates. {#sec:parall-class}
 
