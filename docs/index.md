@@ -34,6 +34,8 @@ The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1
 Our Pytorch implementation is here : [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
 with a wide set of architecture.
 
+
+
 #### Motivation.
 
 Alrao was inspired by the intuition that not all units in a neural
@@ -82,9 +84,7 @@ learning rate to all components in each LSTM unit (thus in the
 implementation, the vector of learning rates is the same for input
 gates, for forget gates, etc.).
 
-However, the update
-[\[eq:alraoprinciple\]](#eq:alraoprinciple){reference-type="eqref"
-reference="eq:alraoprinciple"} cannot be used directly in the last
+However, the update cannot be used directly in the last
 layer. For instance, for regression there may be only one output
 feature. For classification, each feature in the final classification
 layer represents a single category, and so using different learning
@@ -302,14 +302,14 @@ width="\linewidth"}
 width="\linewidth"}
 
 
-  ------------------------- -------- ------------------- ---------------- ------------------- ---------------- ----------------- ---------------- --
-  Model                                                                                                                                           
-                              LR              Loss             Acc (%)             Loss             Acc (%)            Loss            Acc (%)      
-  MobileNet                 $1e$-1     $0.37 \pm 0.01$    $90.2 \pm 0.3$    $1.01 \pm 0.95$     $78 \pm 11$     $0.42 \pm 0.02$   $88.1 \pm 0.6$  
-  GoogLeNet                 $1e$-2     $0.45 \pm 0.05$    $89.6 \pm 1.0$    $0.47 \pm 0.04$    $89.8 \pm 0.4$   $0.47 \pm 0.03$   $88.9 \pm 0.8$  
-  VGG19                     $1e$-1     $0.42 \pm 0.02$    $89.5 \pm 0.2$    $0.43 \pm 0.02$    $88.9 \pm 0.4$   $0.45 \pm 0.03$   $87.5 \pm 0.4$  
-  LSTM (PTB)                $1$       $1.566 \pm 0.003$   $66.1 \pm 0.1$   $1.587 \pm 0.005$   $65.6 \pm 0.1$   $1.67 \pm 0.01$   $64.1 \pm 0.2$  
-  ------------------------- -------- ------------------- ---------------- ------------------- ---------------- ----------------- ---------------- --
+  -------------------------- -------- ------------------- ----------------- ------------------- ----------------- ----------------- -------------------
+|  Model                    |        |                   |                 |                   |                 |                 |                  |
+|                           |  LR    |         Loss      |     Acc (%)     |        Loss       |      Acc (%)    |        Loss     |       Acc (%)    |
+|  MobileNet                | $1e$-1 |   $0.37 \pm 0.01$ |  $90.2 \pm 0.3$ |   $1.01 \pm 0.95$ |    $78 \pm 11$  | $0.42 \pm 0.02$ |   $88.1 \pm 0.6$ |
+|  GoogLeNet                | $1e$-2 |   $0.45 \pm 0.05$ |  $89.6 \pm 1.0$ |   $0.47 \pm 0.04$ |  $89.8 \pm 0.4$ | $0.47 \pm 0.03$ |   $88.9 \pm 0.8$ |
+|  VGG19                    | $1e$-1 |   $0.42 \pm 0.02$ |  $89.5 \pm 0.2$ |   $0.43 \pm 0.02$ |  $88.9 \pm 0.4$ | $0.45 \pm 0.03$ |   $87.5 \pm 0.4$ |
+|  LSTM (PTB)               | $1$    | $1.566 \pm 0.003$ |  $66.1 \pm 0.1$ | $1.587 \pm 0.005$ |  $65.6 \pm 0.1$ | $1.67 \pm 0.01$ |   $64.1 \pm 0.2$ |
+  -------------------------- -------- ------------------- ----------------- ------------------- ----------------- ----------------- -------------------
 
   :  Performance of Alrao-SGD, of SGD with optimal learning rate from
   $\{10^{-5}, 10^{-4}, 10^{-3}, 10^{-2}, 10^{-1}, 1., 10.\}$, and of
