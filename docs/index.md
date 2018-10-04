@@ -10,8 +10,7 @@
  <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
 
 
-Introduction
-============
+# Introduction
 
 We propose *All Learning Rates At Once* (Alrao), an alteration of
 standard optimization methods for deep learning models. Alrao uses
@@ -36,7 +35,7 @@ with a wide set of architecture.
 
 
 
-#### Motivation.
+### Motivation.
 
 Alrao was inspired by the intuition that not all units in a neural
 network end up being useful. Hopefully, in a large enough network, a
@@ -55,8 +54,7 @@ initialization, this hypothesis suggests there might be enough
 sub-networks whose initialization leads to good convergence.
 
 
-All Learning Rates At Once: Description {#sec:idea}
-=======================================
+# All Learning Rates At Once: Description
 
 #### Alrao: principle.
 
@@ -65,8 +63,10 @@ range of possible learning rates $(\eta_{\min}, \eta_{\max})$. Instead
 of using a single learning rate, we sample once and for all one learning
 rate for each *feature*, randomly sampled log-uniformly in
 $(\eta_{\min}, \eta_{\max})$. Then these learning rates are used in the
-usual optimization update: $$\label{eq:alraoprinciple}
-  \theta_{l,i} \leftarrow \theta_{l,i} - \eta_{l,i} \cdot \nabla_{\theta_{l,i}}\ell(\Phi_\theta(x), y)$$
+usual optimization update:
+
+$$\theta_{l,i} \leftarrow \theta_{l,i} - \eta_{l,i} \cdot \nabla_{\theta_{l,i}}\ell(\Phi_\theta(x), y)$$
+
 where $\theta_{l,i}$ is the set of parameters used to compute the
 feature $i$ of layer $l$ from the activations of layer $l-1$ (the
 *incoming* weights of feature $i$). Thus we build "slow-learning" and
@@ -79,10 +79,7 @@ considered as a feature: all incoming weights of the same unit share the
 same learning rate. On the other hand, in a convolutional layer we
 consider each convolution filter as constituting a feature: there is one
 learning rate per filter (or channel), thus keeping
-translation-invariance over the input image. In LSTMs, we apply the same
-learning rate to all components in each LSTM unit (thus in the
-implementation, the vector of learning rates is the same for input
-gates, for forget gates, etc.).
+translation-invariance over the input image.
 
 However, the update cannot be used directly in the last
 layer. For instance, for regression there may be only one output
@@ -92,17 +89,7 @@ rates for these features would favor some categories during learning.
 Instead, on the output layer we chose to duplicate the layer using
 several learning rate values, and use a (Bayesian) model averaging
 method to obtain the overall network output
-(Fig. [2](#fig:archi){reference-type="ref" reference="fig:archi"}).
 
-We set a learning rate *per feature*, rather than per parameter.
-Otherwise, every feature would have some parameters with large learning
-rates, and we would expect even a few large incoming weights to be able
-to derail a feature. So having diverging parameters within a feature is
-hurtful, while having diverging features in a layer is not necessarily
-hurtful since the next layer can choose to disregard them. Still, we
-tested this option; the results are compatible with this intuition
-(Appendix [10](#sec:lr-sampling){reference-type="ref"
-reference="sec:lr-sampling"}).
 
 #### Definitions and notation. {#sec:notations}
 
@@ -116,7 +103,8 @@ the $y_{i}$ given the $x_{i}$, using a deep learning model
 $\Phi_{\theta}$. For each input $x$, $\Phi_{\theta}(x)$ is a probability
 distribution over $\{1, ..., K\}$, and we want to minimize the
 categorical cross-entropy loss $\ell$ over the dataset:
-$\frac{1}{N}\sum_{i}\ell(\Phi_{\theta}(x_{i}), y_{i})$.
+
+$$\frac{1}{N}\sum_{i}\ell(\Phi_{\theta}(x_{i}), y_{i}).$$
 
 A deep learning model for classification $\Phi_{\theta}$ is made of two
 parts: a *pre-classifier* $\phi_{\theta^{\text{pc}}}$ which computes
@@ -136,7 +124,7 @@ probability distribution on an interval $(\eta_{\min}, \eta_{\max})$:
 namely, if $\eta \sim \log -U(\cdot ; \eta_{\min},
 \eta_{\max})$, then $\log \eta$ is uniformly distributed between $\log
 \eta_{\min}$ and $\log \eta_{\max}$. Its density function is
-$$\label{eq:logunif}
+$$
   \log -U(\eta; \eta_{\min}, \eta_{\max}) = \frac{\mathbbm{1}_{\eta_{\min} \leq \eta \leq \eta_{\max}}}{\eta_{\max} - \eta_{\min}}\times\frac{1}{\eta}$$
 
 #### Alrao for the pre-classifier: A random learning rate for each feature.
