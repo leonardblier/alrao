@@ -25,7 +25,7 @@ with Alrao on top of SGD.
 
 ![Alrao with MobileNet](img/learningcurvesmobilenet.png)
 <!-- {:height="50%" width="50%"} -->
-*In this figure, we trained the MobileNet architecture with several optimization method : usual SGD for several learning rates in the interval
+*The MobileNet architecture is trained with several optimization method : usual SGD for several learning rates in the interval
 $(10^{-5}, 100)$, Adam with its default hyperparameters, and Alrao with learning rates sampled in the interval $(10^{-5}, 100)$. We observe that by sampling randomly the learning rates in the model, the performance are close to the optimal learning rates.*
 
 Alrao could be useful when testing architectures: an architecture could
@@ -107,11 +107,11 @@ We now describe Alrao more precisely for deep learning models with
 softmax output, on classification tasks (the case of regression is
 similar).
 
-Let $\mathcal{D} = \{(x_{1}, y_{1}), ..., (x_{N}, y_{N})\}$, with $y_{i}
-\in \{1, ..., K\}$, be a classification dataset. The goal is to predict
+Let $$\mathcal{D} = \{(x_{1}, y_{1}), ..., (x_{N}, y_{N})\}$$, with $$y_{i}
+\in \{1, ..., K\}$$, be a classification dataset. The goal is to predict
 the $y_{i}$ given the $x_{i}$, using a deep learning model
 $\Phi_{\theta}$. For each input $x$, $\Phi_{\theta}(x)$ is a probability
-distribution over $\{1, ..., K\}$, and we want to minimize the
+distribution over $$\{1, ..., K\}$$, and we want to minimize the
 categorical cross-entropy loss $\ell$ over the dataset:
 
 $$\frac{1}{N}\sum_{i}\ell(\Phi_{\theta}(x_{i}), y_{i}).$$
@@ -221,7 +221,7 @@ We used the CIFAR10 dataset with GoogLeNet, MobileNet and VGG19 networks.
 The Alrao learning rates were sampled log-uniformly from
 $\eta_{\min} = 10^{-5}$ to $\eta_{\max} = 10$.
 We compare these results to the same models trained with SGD for every learning rate in
-the set $\{10^{-5},10^{-4},10^{-3},10^{-2}, 10^{-1}, 1., 10.\}$.
+the set $$\{10^{-5},10^{-4},10^{-3},10^{-2}, 10^{-1}, 1., 10.\}$$.
 We also compare to Adam with its default
 hyperparameters ($\eta=10^{-3}, \beta_1 = 0.9, \beta_2 = 0.999$).
 More details on these experiments can be found in the paper.
