@@ -26,7 +26,8 @@ multiple learning rates. Alrao can be used on top of various
 optimization algorithms; our experimental results are obtained
 with Alrao on top of SGD.
 
-![Alrao with MobileNet](img/learningcurvesGooglenet.png){:height="50%" width="50%"}
+![Alrao with MobileNet](img/learningcurvesGooglenet.png)
+<!-- {:height="50%" width="50%"} -->
 In this figure, we trained the MobileNet architecture with several optimization method : usual SGD for several learning rates in the interval
 $(10^{-5}, 100)$, Adam with its default hyperparameters, and Alrao with learning rates sampled in the interval $(10^{-5}, 100)$. We observe that by sampling randomly the learning rates in the model, the performance are close to the optimal learning rates.
 
