@@ -28,6 +28,8 @@ be possible to select a subset of promising architectures based on
 Alrao, and search for the best learning rate on those architectures,
 fine-tuning with any optimizer.
 
+![Before Alrao](img/learningcurvesGooglenettestonly.png){:height="45%" width="45%"}
+
 The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
 
 Our Pytorch implementation is here : [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
