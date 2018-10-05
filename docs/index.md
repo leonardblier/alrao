@@ -167,6 +167,7 @@ $0 \leq a_{j} \leq 1$, and $\sum_{j}a_{j} = 1$. These are not updated by
 gradient descent, but via the switch model averaging method (see below).
 
 ![Before Alrao](img/beforealrao.png){:height="45%" width="45%"}   ![With Alrao](img/newalrao.png){:height="45%" width="45%"}
+
 *Left: a standard fully connected neural network for a classification task with three classes, made of a pre-classifier and a classifier layer.
 Right: Alrao version of the same network. The single classifier layer is replaced with a set of parallel copies of the original classifier, averaged with a model averaging method. Each unit uses its own learning rate for its incoming weights (represented by different styles of arrows).*
 
