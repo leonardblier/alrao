@@ -12,6 +12,11 @@
 
 # Introduction
 
+Ceci
+Est
+Un
+Test
+
 We propose *All Learning Rates At Once* (Alrao), an alteration of
 standard optimization methods for deep learning models. Alrao uses
 multiple learning rates at the same time in the same network. By
@@ -21,6 +26,10 @@ multiple learning rates. Alrao can be used on top of various
 optimization algorithms; our experimental results are obtained
 with Alrao on top of SGD.
 
+![Alrao with MobileNet](img/learningcurvesGooglenet.png){:height="50%" width="50%"}
+In this figure, we trained the MobileNet architecture with several optimization method : usual SGD for several learning rates in the interval
+$(10^{-5}, 100)$, Adam with its default hyperparameters, and Alrao with learning rates sampled in the interval $(10^{-5}, 100)$. We observe that by sampling randomly the learning rates in the model, the performance are close to the optimal learning rates.
+
 Alrao could be useful when testing architectures: an architecture could
 first be trained with Alrao to obtain an approximation of the
 performance it would have with an optimal learning rate. Then it would
@@ -28,7 +37,6 @@ be possible to select a subset of promising architectures based on
 Alrao, and search for the best learning rate on those architectures,
 fine-tuning with any optimizer.
 
-![Before Alrao](img/learningcurvesGooglenettestonly.png){:height="45%" width="45%"}
 
 The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
 
@@ -125,18 +133,17 @@ namely, if $\eta \sim \log -U(\cdot ; \eta_{\min},
 \eta_{\max})$, then $\log \eta$ is uniformly distributed between $\log
 \eta_{\min}$ and $\log \eta_{\max}$.
 
-#### Alrao for the pre-classifier: A random learning rate for each feature.
+### Alrao for the pre-classifier: A random learning rate for each feature.
 
 In the pre-classifier, for each feature $i$ in each layer $l$, a
 learning rate $\eta_{l,i}$ is sampled from the probability distribution
 $\log -U(.; \eta_{\min}, \eta_{\max})$, once and for all at the
-beginning of training.[^4] Then the incoming parameters of each feature
+beginning of training. Then the incoming parameters of each feature
 in the preclassifier are updated in the usual way with this learning
-rate (Eq. [\[eq:updatepc\]](#eq:updatepc){reference-type="ref"
-reference="eq:updatepc"}).
+rate.
 
 
-#### Alrao for the classifier layer: Model averaging from classifiers with different learning rates. {#sec:parall-class}
+### Alrao for the classifier layer: Model averaging from classifiers with different learning rates. {#sec:parall-class}
 
 In the classifier layer, we build multiple clones of the original
 classifier layer, set a different learning rate for each, and then use a
@@ -159,8 +166,7 @@ $$\theta^{\text{cl}} \mathrel{\mathop{:}}=(\theta^{\text{cl}}_{1}, ...,
 \theta^{\text{cl}}_{N_{\text{cl}}})$$. The $a_{j}$ are the parameters
 of the model averaging, and are such that for all $j$,
 $0 \leq a_{j} \leq 1$, and $\sum_{j}a_{j} = 1$. These are not updated by
-gradient descent, but via a model averaging method from the literature
-(see below).
+gradient descent, but via the switch model averaging method (see below).
 
 ![Before Alrao](img/beforealrao.png){:height="45%" width="45%"}   ![With Alrao](img/newalrao.png){:height="45%" width="45%"}
 
@@ -175,7 +181,7 @@ Thus, the original model $\Phi_{\theta}(x)$ leads to the Alrao model
 $\Phi^{\text{Alrao}}_{\theta}(x)$. Only the classifier layer is
 modified, the pre-classifier architecture being unchanged.
 
-#### The Alrao update.
+### The Alrao update.
 The updates for the pre-classifier, classifier, and model averaging weights are as follows.
 
 -   The update rule for the pre-classifier is the usual SGD one, with
@@ -205,8 +211,7 @@ The updates for the pre-classifier, classifier, and model averaging weights are 
     Bayesian method which is both simple, principled and very responsive
     to changes in performance of the various models.
 
-Experiments
-===========
+## Experiments
 
 For image classification, we used the CIFAR10 dataset.
 The Alrao learning rates were sampled log-uniformly from
@@ -249,11 +254,11 @@ the case, for example with the MobileNet model. This confirms a known risk of
 overfit with Adam [@wilson2017marginal]. In our setup, Alrao seems to be
 a more stable default method.
 
-Limitations, further remarks, and future directions {#sec:discussion}
-===================================================
 
 
-#### Adding two hyperparameters.
+## Remarks
+
+### Adding two hyperparameters.
 
 We claim to remove a hyperparameter, the learning rate, but replace it
 with two hyperparameters $\eta_{\min}$ and $\eta_{\max}$.
@@ -282,22 +287,6 @@ numerical issues for $\eta =
 thus stable to relatively large learning rates. We would still expect
 numerical issues with very large $\eta_\max$, but this has not been
 observed in our experiments.
-
-#### Alrao with Adam.
-
-Alrao is much less reliable with Adam than with SGD. Surprisingly, this
-occurs mostly for test performance, which can even diverge, while
-training curves mostly look good
-(Appendix [8](#sec:alrao-adam){reference-type="ref"
-reference="sec:alrao-adam"}). We have no definitive explanation for this
-at present. It might be that changing the learning rate in Adam also
-requires changing the momentum parameters in a correlated way. It might
-be that Alrao does not work on Adam because Adam is more sensitive to
-its hyperparameters. The stark train/test discrepancy might also suggest
-that Alrao-Adam performs well as a pure optimization method but
-exacerbates the underlying risk of overfit of Adam
-[@wilson2017marginal; @keskar2017improving].
-
 
 # Conclusion
 
