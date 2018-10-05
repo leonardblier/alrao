@@ -170,14 +170,14 @@ gradient descent, but via the switch model averaging method (see below).
 *Left: a standard fully connected neural network for a classification task with three classes, made of a pre-classifier and a classifier layer.
 Right: Alrao version of the same network. The single classifier layer is replaced with a set of parallel copies of the original classifier, averaged with a model averaging method. Each unit uses its own learning rate for its incoming weights (represented by different styles of arrows).*
 
-For each classifier $C_{\theta^{\text{cl}}_{j}}$, we set a learning
-rate $\log \eta_{j} = \log \eta_{\min} +
-\frac{j-1}{N_{\text{cl}}-1}\log(\eta_{\max}/ \eta_{\min})$, so that
+For each classifier $$C_{\theta^{\text{cl}}_{j}}$$, we set a learning
+rate $$\log \eta_{j} = \log \eta_{\min} +
+\frac{j-1}{N_{\text{cl}}-1}\log(\eta_{\max}/ \eta_{\min})$$, so that
 the classifiers' learning rates are log-uniformly spread on the interval
-$(\eta_{\min}, \eta_{\max})$.
+$$(\eta_{\min}, \eta_{\max})$$.
 
 Thus, the original model $\Phi_{\theta}(x)$ leads to the Alrao model
-$\Phi^{\text{Alrao}}_{\theta}(x)$. Only the classifier layer is
+$\Phi^{\text{Alrao}}_{\theta}(x)$$. Only the classifier layer is
 modified, the pre-classifier architecture being unchanged.
 
 ### The Alrao update.
