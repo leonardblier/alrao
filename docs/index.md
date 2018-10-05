@@ -38,12 +38,12 @@ fine-tuning with any optimizer.
 
 The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
 
-Our Pytorch implementation is here : [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
-with a wide set of architecture. In particular, here is a link to our step-by-step tutorial on how to use Alrao : [github.com/leonardblier/alrao/tutorial.ipynb](https://github.com/leonardblier/alrao/blob/master/tutorial.ipynb)
+Our Pytorch implementation is here: [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
+with a wide set of architecture. In particular, here is a link to our step-by-step tutorial on how to use Alrao: [github.com/leonardblier/alrao/tutorial.ipynb](https://github.com/leonardblier/alrao/blob/master/tutorial.ipynb).
 
 
 
-## Motivation.
+## Motivation
 
 Alrao was inspired by the intuition that not all units in a neural
 network end up being useful. Hopefully, in a large enough network, a
@@ -66,7 +66,7 @@ sub-networks whose initialization leads to good convergence.
 
 # All Learning Rates At Once: Description
 
-## Alrao: principle.
+## Alrao: principle
 
 Alrao starts with a standard optimization method such as SGD, and a
 range of possible learning rates $(\eta_{\min}, \eta_{\max})$. Instead
@@ -98,10 +98,10 @@ layer represents a single category, and so using different learning
 rates for these features would favor some categories during learning.
 Instead, on the output layer we chose to duplicate the layer using
 several learning rate values, and use a (Bayesian) model averaging
-method to obtain the overall network output
+method to obtain the overall network output.
 
 
-## Definitions and notation.
+## Definitions and notation
 
 We now describe Alrao more precisely for deep learning models with
 softmax output, on classification tasks (the case of regression is
@@ -133,7 +133,7 @@ namely, if $\eta \sim \log -U(\cdot ; \eta_{\min},
 \eta_{\max})$, then $\log \eta$ is uniformly distributed between $\log
 \eta_{\min}$ and $\log \eta_{\max}$.
 
-### Alrao for the pre-classifier: A random learning rate for each feature.
+### Alrao for the pre-classifier: A random learning rate for each feature
 
 In the pre-classifier, for each feature $i$ in each layer $l$, a
 learning rate $\eta_{l,i}$ is sampled from the probability distribution
@@ -183,7 +183,7 @@ Thus, the original model $\Phi_{\theta}(x)$ leads to the Alrao model
 $\Phi^{\text{Alrao}}_{\theta}(x)$$. Only the classifier layer is
 modified, the pre-classifier architecture being unchanged.
 
-### The Alrao update.
+### The Alrao update
 The updates for the pre-classifier, classifier, and model averaging weights are as follows.
 
 -   The update rule for the pre-classifier is the usual SGD one, with
