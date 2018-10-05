@@ -12,10 +12,7 @@
 
 # Introduction
 
-Ceci
-Est
-Un
-Test
+
 
 We propose *All Learning Rates At Once* (Alrao), an alteration of
 standard optimization methods for deep learning models. Alrao uses
@@ -26,7 +23,7 @@ multiple learning rates. Alrao can be used on top of various
 optimization algorithms; our experimental results are obtained
 with Alrao on top of SGD.
 
-![Alrao with MobileNet](img/learningcurvesGooglenet.png)
+![Alrao with MobileNet](img/learningcurvesmobilenet.png)
 <!-- {:height="50%" width="50%"} -->
 In this figure, we trained the MobileNet architecture with several optimization method : usual SGD for several learning rates in the interval
 $(10^{-5}, 100)$, Adam with its default hyperparameters, and Alrao with learning rates sampled in the interval $(10^{-5}, 100)$. We observe that by sampling randomly the learning rates in the model, the performance are close to the optimal learning rates.
