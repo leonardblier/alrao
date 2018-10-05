@@ -25,8 +25,8 @@ with Alrao on top of SGD.
 
 ![Alrao with MobileNet](img/learningcurvesmobilenet.png)
 <!-- {:height="50%" width="50%"} -->
-In this figure, we trained the MobileNet architecture with several optimization method : usual SGD for several learning rates in the interval
-$(10^{-5}, 100)$, Adam with its default hyperparameters, and Alrao with learning rates sampled in the interval $(10^{-5}, 100)$. We observe that by sampling randomly the learning rates in the model, the performance are close to the optimal learning rates.
+*In this figure, we trained the MobileNet architecture with several optimization method : usual SGD for several learning rates in the interval
+$(10^{-5}, 100)$, Adam with its default hyperparameters, and Alrao with learning rates sampled in the interval $(10^{-5}, 100)$. We observe that by sampling randomly the learning rates in the model, the performance are close to the optimal learning rates.*
 
 Alrao could be useful when testing architectures: an architecture could
 first be trained with Alrao to obtain an approximation of the
@@ -145,7 +145,7 @@ rate.
 
 In the classifier layer, we build multiple clones of the original
 classifier layer, set a different learning rate for each, and then use a
-model averaging method from among them. The averaged classifier and the
+model averaging method from among them (see figure below). The averaged classifier and the
 overall Alrao model are:
 
 $$
@@ -167,7 +167,8 @@ $0 \leq a_{j} \leq 1$, and $\sum_{j}a_{j} = 1$. These are not updated by
 gradient descent, but via the switch model averaging method (see below).
 
 ![Before Alrao](img/beforealrao.png){:height="45%" width="45%"}   ![With Alrao](img/newalrao.png){:height="45%" width="45%"}
-
+*Left: a standard fully connected neural network for a classification task with three classes, made of a pre-classifier and a classifier layer.
+Right: Alrao version of the same network. The single classifier layer is replaced with a set of parallel copies of the original classifier, averaged with a model averaging method. Each unit uses its own learning rate for its incoming weights (represented by different styles of arrows).*
 
 For each classifier $C_{\theta^{\text{cl}}_{j}}$, we set a learning
 rate $\log \eta_{j} = \log \eta_{\min} +
@@ -211,80 +212,49 @@ The updates for the pre-classifier, classifier, and model averaging weights are 
 
 ## Experiments
 
-For image classification, we used the CIFAR10 dataset.
+ Here we only present our results on image classification. Additional results on recurrent learning can be found in the paper.
+
+We used the CIFAR10 dataset with GoogLeNet, MobileNet and VGG19 networks.
 The Alrao learning rates were sampled log-uniformly from
 $\eta_{\min} = 10^{-5}$ to $\eta_{\max} = 10$.
 We compare these results to the same models trained with SGD for every learning rate in
 the set $\{10^{-5},10^{-4},10^{-3},10^{-2}, 10^{-1}, 1., 10.\}$.
 We also compare to Adam with its default
 hyperparameters ($\eta=10^{-3}, \beta_1 = 0.9, \beta_2 = 0.999$).
-
-To test Alrao on a different kind of architecture, we used a LSTM [@hochreiter1997long]
-neural network for character prediction on the Penn Treebank [@Marcus1993]
-dataset. The experimental procedure is the same, with
-$(\eta_{\min}, \eta_{\max}) =
-(0.001, 100)$. The loss is given in bits per character (BPC)
-and the accuracy is the proportion of correct character predictions.
-
 More details on these experiments can be found in the paper.
 
+Below are the learning curves
 
 
+![Alrao with MobileNet](img/learningcurvesmobilenet.png)
 
-|  Model                    |        SGD Optimal                                    |                   |                 |                 |                  |
-|                           |  LR    |         Loss      |     Acc (%)     |        Loss       |      Acc (%)    |        Loss     |       Acc (%)    |
-|  MobileNet                | $1e$-1 |   $0.37 \pm 0.01$ |  $90.2 \pm 0.3$ |   $1.01 \pm 0.95$ |    $78 \pm 11$  | $0.42 \pm 0.02$ |   $88.1 \pm 0.6$ |
-|  GoogLeNet                | $1e$-2 |   $0.45 \pm 0.05$ |  $89.6 \pm 1.0$ |   $0.47 \pm 0.04$ |  $89.8 \pm 0.4$ | $0.47 \pm 0.03$ |   $88.9 \pm 0.8$ |
-|  VGG19                    | $1e$-1 |   $0.42 \pm 0.02$ |  $89.5 \pm 0.2$ |   $0.43 \pm 0.02$ |  $88.9 \pm 0.4$ | $0.45 \pm 0.03$ |   $87.5 \pm 0.4$ |
-|  LSTM (PTB)               | $1$    | $1.566 \pm 0.003$ |  $66.1 \pm 0.1$ | $1.587 \pm 0.005$ |  $65.6 \pm 0.1$ | $1.67 \pm 0.01$ |   $64.1 \pm 0.2$ |
+*MobileNet*
+![Alrao with MobileNet](img/learningcurvesGooglenet.png)
+*GoogLeNet*
 
+We can also look at the influence of the hyperparameters $\eta_\min$ and $\eta_\max$ on Alrao performance (See figure below).
 
+![Alrao with MobileNet](img/triangle.png)
 
+*Performance of Alrao with a GoogLeNet model, depending on the interval
+  $(\eta_\min, \eta_\max)$. Left: loss on the train set; right: on the
+  test set. Each point with coordinates $(\eta_\min, \eta_\max)$ above
+  the diagonal represents the loss after 30 epochs for Alrao with this
+  interval. Points $(\eta, \eta)$ on the diagonal represent
+  standard SGD
+  with learning rate $\eta$ after 50 epochs. Standard SGD with $\eta = 10^2$ is
+  left blank to due numerical divergence (NaN). Alrao works as soon as
+  $(\eta_\min, \eta_\max)$ contains at least one suitable learning
+  rate.*
 
-#### Comments.
-
-As expected, Alrao performs slightly worse than the best learning rate.
-Still, even with wide intervals $(\eta_\min, \eta_\max)$, Alrao comes
-reasonably close to the best learning rate, across all setups; hence
-Alrao's possible use as a quick assessment method. Although Adam with
-its default parameters almost matches optimal SGD, this is not always
-the case, for example with the MobileNet model. This confirms a known risk of
-overfit with Adam [@wilson2017marginal]. In our setup, Alrao seems to be
-a more stable default method.
-
-
-
-## Remarks
-
-### Adding two hyperparameters.
-
-We claim to remove a hyperparameter, the learning rate, but replace it
-with two hyperparameters $\eta_{\min}$ and $\eta_{\max}$.
-
-Formally, this is true. But a systematic study of the impact of these
-two hyperparameters (Fig. [5](#fig:trig){reference-type="ref"
-reference="fig:trig"}) shows that the sensitivity to $\eta_{\min}$ and
-$\eta_{\max}$ is much lower than the original sensitivity to the
-learning rate. In our experiments, convergence happens as soon as
-$(\eta_{\min};\eta_{\max})$ contains a reasonable learning rate
-(Fig. [5](#fig:trig){reference-type="ref" reference="fig:trig"}).
-
-A wide range of values of $(\eta_{\min};\eta_{\max})$ will contain one
-good learning rate and achieve close-to-optimal performance
-(Fig. [5](#fig:trig){reference-type="ref" reference="fig:trig"}).
-Typically, we recommend to just use an interval containing all the
-learning rates that would have been tested in a grid search, e.g.,
-$10^{-5}$ to $10$.
-
-So, even if the choice of $\eta_{\min}$ and $\eta_{\max}$ is important,
-the results are much more stable to varying these two hyperparameters
-than to the learning rate. For instance, standard SGD fails due to
-numerical issues for $\eta =
-100$ while Alrao with $\eta_\max = 100$ works with any $\eta_\min\leq 1$
-(Fig. [5](#fig:trig){reference-type="ref" reference="fig:trig"}), and is
-thus stable to relatively large learning rates. We would still expect
-numerical issues with very large $\eta_\max$, but this has not been
-observed in our experiments.
+  As expected, Alrao performs slightly worse than the best learning rate.
+  Still, even with wide intervals $(\eta_\min, \eta_\max)$, Alrao comes
+  reasonably close to the best learning rate, across all setups; hence
+  Alrao's possible use as a quick assessment method. Although Adam with
+  its default parameters almost matches optimal SGD, this is not always
+  the case, for example with the MobileNet model. This confirms a known risk of
+  overfit with Adam [@wilson2017marginal]. In our setup, Alrao seems to be
+  a more stable default method.
 
 # Conclusion
 
@@ -294,10 +264,3 @@ provides performance close enough to SGD with an optimal learning rate,
 as soon as the range of random learning rates contains a suitable one.
 This could save time when testing deep learning models, opening the door
 to more out-of-the-box uses of deep learning.
-
-# Acknowledgments
-
-We would like to thank Corentin Tallec for his technical help, and his
-many remarks and advice. We thank Olivier Teytaud for pointing useful
-references.
-                 
