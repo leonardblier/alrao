@@ -2,7 +2,7 @@
 
 Authors' implementation of "Learning with Random Learning Rates" (2018) in PyTorch.
 
-The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
+The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322), and a shorter blog post explaining the method here: [leonardblier.github.io/alrao](https://leonardblier.github.io/alrao/)
 
 Authors: Léonard Blier, Pierre Wolinski, Yann Ollivier.
 
