@@ -17,9 +17,9 @@ with deep learning models. One of the most critical hyperparameters
 is the learning rate of the gradient descent.
 With too large learning rates, the model does not
 learn; with too small learning rates, optimization is slow and can lead to
-local minima and poor generalization [8].
+local minima and poor generalization [1].
 While Adam with its default settings works on a surprisingly large number of problems,
-it has been shown to display critical failures [9], thus failing as a general default optimization method.
+it has been shown to display critical failures [2], thus failing as a general default optimization method.
 This was confirmed in our experiments (see figure below).
 
 
@@ -64,7 +64,7 @@ those, such as BatchNorm or sigmoid/tanh activations.)
 
 Several lines of work support the idea that not all units of a network
 are useful or need to be trained, for example on *pruning* trained networks
-[1, 2, 3, 4], or the *lottery ticket hypothesis* [5].
+[3, 4, 5, 6], or the *lottery ticket hypothesis* [7].
 
 
 
@@ -218,7 +218,7 @@ The updates for the pre-classifier, classifier, and model averaging weights are 
 
 -   To set the weights $a_j$, several model averaging techniques are
     available, such as Bayesian Model Averaging. We
-    decided to use the *Switch* model averaging [6], a
+    decided to use the *Switch* model averaging [8], a
     Bayesian method which is both simple, principled and very responsive
     to changes in performance of the various models.
 
@@ -265,7 +265,7 @@ We can also look at the influence of the hyperparameters $\eta_\min$ and $\eta_\
   Alrao's possible use as a quick assessment method. Although Adam with
   its default parameters almost matches optimal SGD, this is not always
   the case, for example with the MobileNet model. This confirms a known risk of
-  overfit with Adam [7]. In our setup, Alrao seems to be
+  overfit with Adam [9]. In our setup, Alrao seems to be
   a more stable default method.
 
 ## Conclusion
@@ -278,24 +278,24 @@ This could save time when testing deep learning models, opening the door
 to more out-of-the-box uses of deep learning.
 
 ## References
-
-[1] Y. LeCun, J. S. Denker, and S. A. Solla. Optimal brain damage. Advances in Neural Information Processing Systems 2, 1990
-
-[2] S. Han, H. Mao, and W. J. Dally. Deep Compression: Compressing Deep Neural Networks with Pruning, Trained Quantization and Huffman Coding. arXiv preprint arXiv:1510.00149, 2015.
-
-[3] S. Han, J. Pool, J. Tran, and W. J. Dally. Learning both Weights and Connections for Efficient Neural Networks. In Advances in Neural Information Processing Systems, 2015.
-
-[4] A. See, M.-T. Luong, and C. D. Manning. Compression of Neural Machine Translation
-Models via Pruning. arXiv preprint arXiv:1606.09274, 2016.
-
-[5] J. Frankle and M. Carbin. The Lottery Ticket Hypothesis: Finding Small, Trainable Neural Networks. arXiv preprint arXiv:1704.04861, mar 2018.
-
-[6] T. Van Erven, P. Grünwald, and S. De Rooij. Catching up faster by switching sooner: A predictive approach to adaptive estimation with an application to the AIC-BIC dilemma. Journal of the Royal Statistical Society: Series B , 2012.
-
-[7] A. C. Wilson, R. Roelofs, M. Stern, N. Srebro, and B. Recht. The marginal value of adaptive gradient methods in machine learning. In Advances in Neural Information Processing Systems, 2
-
-[8] S. Jastrzebski, Z. Kenton, D. Arpit, N. Ballas, A. Fischer, Y. Bengio, and
+[1] S. Jastrzebski, Z. Kenton, D. Arpit, N. Ballas, A. Fischer, Y. Bengio, and
   A. Storkey. Three factors influencing minima in sgd. arXiv preprint arXiv:1711.04623, 2017.
 
-[9] A. C. Wilson, R. Roelofs, M. Stern, N. Srebro, and B. Recht. The marginal value of adaptive gradient methods in machine learning.
+[2] A. C. Wilson, R. Roelofs, M. Stern, N. Srebro, and B. Recht. The marginal value of adaptive gradient methods in machine learning.
 In Advances in Neural Information Processing Systems, 2017.
+
+
+[3] Y. LeCun, J. S. Denker, and S. A. Solla. Optimal brain damage. Advances in Neural Information Processing Systems 2, 1990
+
+[4] S. Han, H. Mao, and W. J. Dally. Deep Compression: Compressing Deep Neural Networks with Pruning, Trained Quantization and Huffman Coding. arXiv preprint arXiv:1510.00149, 2015.
+
+[5] S. Han, J. Pool, J. Tran, and W. J. Dally. Learning both Weights and Connections for Efficient Neural Networks. In Advances in Neural Information Processing Systems, 2015.
+
+[6] A. See, M.-T. Luong, and C. D. Manning. Compression of Neural Machine Translation
+Models via Pruning. arXiv preprint arXiv:1606.09274, 2016.
+
+[7] J. Frankle and M. Carbin. The Lottery Ticket Hypothesis: Finding Small, Trainable Neural Networks. arXiv preprint arXiv:1704.04861, mar 2018.
+
+[8] T. Van Erven, P. Grünwald, and S. De Rooij. Catching up faster by switching sooner: A predictive approach to adaptive estimation with an application to the AIC-BIC dilemma. Journal of the Royal Statistical Society: Series B , 2012.
+
+[9] A. C. Wilson, R. Roelofs, M. Stern, N. Srebro, and B. Recht. The marginal value of adaptive gradient methods in machine learning. In Advances in Neural Information Processing Systems, 2
