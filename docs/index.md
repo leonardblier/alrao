@@ -23,7 +23,6 @@ While Adam with its default settings works on a surprisingly large number of pro
 it has been shown to display critical failures [2], thus failing as a general default optimization method.
 This was confirmed in our experiments (see figure below).
 
-
 We propose *All Learning Rates At Once* (Alrao), an alteration of
 standard optimization methods for deep learning models. Alrao uses
 multiple learning rates at the same time in the same network. By
@@ -32,6 +31,8 @@ to the performance of the optimal learning rate, without having to try
 multiple learning rates. Alrao can be used on top of various
 optimization algorithms; our experimental results are obtained
 with Alrao on top of SGD.
+
+The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
 
 ![Alrao with MobileNet](img/learningcurvesmobilenet.png)
 <!-- {:height="50%" width="50%"} -->
@@ -46,7 +47,6 @@ Alrao, and search for the best learning rate on those architectures,
 fine-tuning with any optimizer.
 
 
-The original paper can be found here: [arxiv:1810.01322](https://arxiv.org/abs/1810.01322).
 
 Our Pytorch implementation is here : [github.com/leonardblier/alrao](https://github.com/leonardblier/alrao). It can be used
 with a wide set of architecture. In particular, here is a link to our step-by-step tutorial on how to use Alrao : [github.com/leonardblier/alrao/tutorial.ipynb](https://github.com/leonardblier/alrao/blob/master/tutorial.ipynb)
