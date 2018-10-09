@@ -18,6 +18,7 @@ is the learning rate of the gradient descent.
 With too large learning rates, the model does not
 learn; with too small learning rates, optimization is slow and can lead to
 local minima and poor generalization [1].
+
 While Adam with its default settings works on a surprisingly large number of problems,
 it has been shown to display critical failures [2], thus failing as a general default optimization method.
 This was confirmed in our experiments (see figure below).
