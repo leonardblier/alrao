@@ -12,6 +12,15 @@
 
 # Introduction
 
+Hyperparameter tuning is a notable source of computational cost
+with deep learning models. One of the most critical hyperparameters
+is the learning rate of the gradient descent.
+With too large learning rates, the model does not
+learn; with too small learning rates, optimization is slow and can lead to
+local minima and poor generalization [8].
+While Adam with its default settings works on a surprisingly large number of problems,
+it has been shown to display critical failures [9], thus failing as a general default optimization method.
+This was confirmed in our experiments (see figure below).
 
 
 We propose *All Learning Rates At Once* (Alrao), an alteration of
@@ -284,3 +293,9 @@ Models via Pruning. arXiv preprint arXiv:1606.09274, 2016.
 [6] T. Van Erven, P. Grünwald, and S. De Rooij. Catching up faster by switching sooner: A predictive approach to adaptive estimation with an application to the AIC-BIC dilemma. Journal of the Royal Statistical Society: Series B , 2012.
 
 [7] A. C. Wilson, R. Roelofs, M. Stern, N. Srebro, and B. Recht. The marginal value of adaptive gradient methods in machine learning. In Advances in Neural Information Processing Systems, 2
+
+[8] S. Jastrzebski, Z. Kenton, D. Arpit, N. Ballas, A. Fischer, Y. Bengio, and
+  A. Storkey. Three factors influencing minima in sgd. arXiv preprint arXiv:1711.04623, 2017.
+
+[9] A. C. Wilson, R. Roelofs, M. Stern, N. Srebro, and B. Recht. The marginal value of adaptive gradient methods in machine learning.
+In Advances in Neural Information Processing Systems, 2017.
