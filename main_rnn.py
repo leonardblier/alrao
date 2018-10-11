@@ -125,7 +125,7 @@ if args.use_alrao:
                        for p in lcparams)
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 else:
-    net = StandardModel(preclassifier, LinearClassifierRNN)
+    net = StandardModel(preclassifier, LinearClassifierRNN, args.nhid, ntokens)
     total_param = sum(np.prod(p.size()) for p in net.parameters())
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 
