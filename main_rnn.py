@@ -66,9 +66,9 @@ parser.add_argument('--char_prediction', action = 'store_true', default = False,
 # Alrao Parameters
 parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
-parser.add_argument('--minlr', type=int, default=.001,
+parser.add_argument('--minlr', type=float, default=.001,
                     help='minimum LR in alrao (eta_min)')
-parser.add_argument('--maxlr', type=int, default=100.,
+parser.add_argument('--maxlr', type=float, default=100.,
                     help='maximum LR in alrao (eta_max)')
 parser.add_argument('--nb_class', type=int, default=6,
                     help='number of classifiers before the switch')
