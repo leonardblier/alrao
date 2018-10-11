@@ -111,9 +111,18 @@ class StandardModel(nn.Module):
         self.preclassifier = preclassifier
         self.classifier = classifier(*args, **kwargs) #.to(device)
 
-    def forward(self, x):
-        x = self.preclassifier(x)
-        return self.classifier(x)
+    def forward(self, *args, **kwargs):
+        x = self.preclassifier(*args, **kwargs)
+
+        z = x
+        if isinstance(z, tuple):
+            z = x[0]
+
+        out = self.classifier(z)
+
+        if isinstance(x, tuple):
+            out = (out,) + x[1:]
+        return out
 
 preclassifier = RNNModel(model_name, ntokens, args.emsize, args.nhid,
                          args.nlayers, args.drop_out) #.to(device)
@@ -226,7 +235,8 @@ def train(epoch):
         pbar.update(args.bptt)
         postfix = OrderedDict([("LossTrain", "{:.4f}".format(total_loss/(batch_idx+1))),
                                ("AccTrain", "{:.3f}".format(100.*correct/total_pred))])
-        postfix["PostSw"] = net.repr_posterior()
+        if args.use_alrao:
+            postfix["PostSw"] = net.repr_posterior()
         pbar.set_postfix(postfix)
 
         if args.use_alrao:
