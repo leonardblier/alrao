@@ -243,6 +243,8 @@ def train(epoch):
             net.update_switch(targets, catch_up=batch_idx % 20 == 0)
             optimizer.update_posterior(net.posterior())
 
+    pbar.close()
+
     if args.use_alrao:
         cl_perf = net.switch.get_cl_perf()
         for k in range(len(cl_perf)):
