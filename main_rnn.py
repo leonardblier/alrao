@@ -109,7 +109,7 @@ class StandardModel(nn.Module):
     def __init__(self, preclassifier, classifier, *args, **kwargs):
         super(StandardModel, self).__init__()
         self.preclassifier = preclassifier
-        self.classifier = classifier(*args, **kwargs) #.to(device)
+        self.classifier = classifier(*args, **kwargs)
 
     def forward(self, *args, **kwargs):
         x = self.preclassifier(*args, **kwargs)
@@ -125,7 +125,7 @@ class StandardModel(nn.Module):
         return out
 
 preclassifier = RNNModel(model_name, ntokens, args.emsize, args.nhid,
-                         args.nlayers, args.drop_out) #.to(device)
+                         args.nlayers, args.drop_out)
 if args.use_alrao:
     net = AlraoModel(preclassifier, args.nb_class, LinearClassifierRNN, args.nhid, ntokens)
     total_param = sum(np.prod(p.size()) for p in net.parameters_preclassifier())
