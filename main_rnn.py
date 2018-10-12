@@ -38,7 +38,7 @@ parser.add_argument('--drop_out', type=float, default=.2,
                     help='drop-out rate')
 parser.add_argument('--optimizer', default='SGD',
                     help='optimizer (default: SGD) {Adam, SGD}')
-parser.add_argument('--lr', type=float, default=.01,
+parser.add_argument('--lr', type=float, default=1.,
                     help='learning rate, when used without alrao')
 parser.add_argument('--momentum', type=float, default=0.,
                     help='momentum')
@@ -60,11 +60,11 @@ parser.add_argument('--batch_size', type=int, default=20,
                     help='batch size')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
-parser.add_argument('--char_prediction', action = 'store_true', default = False,
+parser.add_argument('--char_prediction', action='store_true', default=False,
                     help = 'task: character prediction')
 
 # Alrao Parameters
-parser.add_argument('--use_alrao', action='store_true', default=True,
+parser.add_argument('--use_alrao', action='store_true', default=False,
                     help='multiple learning rates')
 parser.add_argument('--minlr', type=float, default=.001,
                     help='minimum LR in alrao (eta_min)')
