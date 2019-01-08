@@ -21,10 +21,24 @@ class Switch(nn.Module):
 
     This class manages model averaging and updates its parameters using the update
         rule given in algorithm 1 of (B).
+
+    Parameters:
+        loss: loss used in the model
+            loss(output, target, size_average = False) returns the loss embedded into a 0-dim tensor
+            the option 'size_average = True' returns the averaged loss
     """
-    def __init__(self, nb_models, theta=.9999, alpha=0.001, save_cl_perf=False):
+    def __init__(self, nb_models, theta=.9999, alpha=0.001, save_cl_perf=False, task='classification',
+            loss=None):
         super(Switch, self).__init__()
 
+        self.task = task
+        if task == 'classification' and loss is None:
+            self.loss = F.nll_loss
+        elif loss is not None:
+            self.loss = loss
+        else:
+            #TODO: error
+            pass
         self.nb_models = nb_models
         self.theta = theta
         self.alpha = alpha
@@ -55,8 +69,12 @@ class Switch(nn.Module):
         """
         Return the performance (loss and acc) of each classifier
         """
-        return [(loss / self.cl_total, corr / self.cl_total) \
-                for (loss, corr) in zip(self.cl_loss, self.cl_correct)]
+        if self.task == 'classification':
+            return [(loss / self.cl_total, corr / self.cl_total) \
+                    for (loss, corr) in zip(self.cl_loss, self.cl_correct)]
+        elif self.task == 'regression':
+            return [loss / self.cl_total \
+                    for loss in self.cl_loss]
 
     def piT(self, t):
         """
@@ -76,11 +94,12 @@ class Switch(nn.Module):
         if self.save_cl_perf:
             self.cl_total += 1
             for (k, x) in enumerate(lst_logpx):
-                self.cl_loss[k] += F.nll_loss(x, y).item()
-                self.cl_correct[k] += (torch.max(x, 1)[1]).eq(y.data).sum().item() / y.size(0)
+                self.cl_loss[k] += self.loss(x, y).item()
+                if self.task == 'classification':
+                    self.cl_correct[k] += (torch.max(x, 1)[1]).eq(y.data).sum().item() / y.size(0)
 
         # px is the tensor of the log probabilities of the mini-batch for each classifier
-        logpx = torch.stack([-F.nll_loss(x, y, size_average=True) for x in lst_logpx],
+        logpx = torch.stack([-self.loss(x, y, size_average=True) for x in lst_logpx],
                             dim=0).detach()
         from math import isnan
         if any(isnan(p) for p in logpx):
@@ -112,7 +131,10 @@ class Switch(nn.Module):
             lst_logpx: list of the outputs of the models, which are supposed to be
                 tensors of log-probabilities
         """
-        return log_sum_exp(torch.stack(lst_logpx, -1) + self.logposterior, dim=-1)
+        if self.task == 'classification':
+            return log_sum_exp(torch.stack(lst_logpx, -1) + self.logposterior, dim=-1)
+        elif self.task == 'regression':
+            return sum(torch.stack(lst_logpx, -1) * self.logposterior, dim=-1)
 
 
 def log_sum_exp(tensor, dim=None):

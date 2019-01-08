@@ -64,6 +64,8 @@ parser.add_argument('--maxLR', type=int, default=0,
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
 parser.add_argument('--nb_class', type=int, default=10,
                     help='number of classifiers before the switch')
+parser.add_argument('--task', default='classification',
+                    help='task to perform default: "classification" {"classification", "regression"}')
 
 args = parser.parse_args()
 

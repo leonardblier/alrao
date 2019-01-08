@@ -13,11 +13,17 @@ class AlraoModel(nn.Module):
         nclassifiers: number of classifiers to use with the model averaging method
         nclasses: number of classes in the classification task
         classifier_gen: python class to use to construct the classifiers
+        task: either 'classification' or 'regression'
+        loss: loss used in the model
+            loss(output, target, size_average = False) returns the loss embedded into a 0-dim tensor
+            the option 'size_average = True' returns the averaged loss
         *args, **kwargs: arguments to be passed to the constructor of 'classifier_gen'
     """
-    def __init__(self, preclassifier, nclassifiers, classifier_gen, *args, **kwargs):
+    def __init__(self, preclassifier, nclassifiers, classifier_gen, task, loss, *args, **kwargs):
         super(AlraoModel, self).__init__()
-        self.switch = Switch(nclassifiers, save_cl_perf=True)
+        self.task = task
+        self.loss = loss
+        self.switch = Switch(nclassifiers, save_cl_perf=True, task=task, loss=loss)
         self.preclassifier = preclassifier
         self.nclassifiers = nclassifiers
 
