@@ -105,6 +105,7 @@ train_inputs, train_targets = generate_data(func, input_dim, data_train_size)
 test_inputs, test_targets = generate_data(func, input_dim, data_test_size)
 
 # Regression loss
+# base loss class
 class _Loss(nn.Module):
     def __init__(self, size_average=None, reduce=None, reduction='mean'):
         super(_Loss, self).__init__()
@@ -113,6 +114,7 @@ class _Loss(nn.Module):
         else:
             self.reduction = reduction
 
+# loss adapted to one final layer
 class L2LossLog(_Loss):
     __constants__ = ['reduction']
 
@@ -124,6 +126,7 @@ class L2LossLog(_Loss):
         return (input - target).pow(2).sum() / (2 * self.sigma2 * len(input)) + \
                 .5 * math.log(2 * math.pi * self.sigma2)
 
+# loss adapted to the output of the switch
 class L2LossAdditional(_Loss):
     def __init__(self, size_average=None, reduce=None, reduction='mean', sigma2 = 1.):
         super(L2LossAdditional, self).__init__(size_average, reduce, reduction)
@@ -132,7 +135,7 @@ class L2LossAdditional(_Loss):
     def forward(self, input, target):
         mu_i, pi_i = input
         mu_i = mu_i.transpose(1, 2).transpose(0, 1)
-        loss_per_cl = (-(mu_i - target).pow(2).sum(2).sum(1) / (2 * self.sigma2)).exp()
+        loss_per_cl = (-(mu_i - target).pow(2).sum(2).sum(1) / (2 * self.sigma2 * target.size(0))).exp()
         loss_tot = (loss_per_cl * pi_i).sum() / math.sqrt(2 * math.pi * self.sigma2)
         return -loss_tot.log()
 
