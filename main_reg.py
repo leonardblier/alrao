@@ -124,9 +124,11 @@ class L2LossLog(_Loss):
         self.sigma2 = sigma2
 
     def forward(self, input, target):
-        ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
-                math.sqrt(2 * math.pi * self.sigma2)
-        return -(ret + eps_log).log().mean()
+        return ((input - target).pow(2).sum(1) / (2 * self.sigma2)).mean() + \
+                .5 * math.log(2 * math.pi * self.sigma2)
+        #ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
+        #        math.sqrt(2 * math.pi * self.sigma2)
+        #return -(ret + eps_log).log().mean()
         #return (input - target).pow(2).sum() / (2 * self.sigma2 * len(input)) + \
         #        .5 * math.log(2 * math.pi * self.sigma2)
 
