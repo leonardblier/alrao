@@ -146,6 +146,7 @@ class L2LossAdditional(_Loss):
         # probas_per_cl: batch_size * nb_classifiers
         probas = (probas_per_cl * ps).sum(1) / math.sqrt(2 * math.pi * self.sigma2)
         if probas.log().mean() != probas.log().mean():
+            print(probas)
             print('ALERTE !!!')
         return -probas.log().mean()
         """
