@@ -61,11 +61,11 @@ parser.add_argument('--size_multiplier', type=int, default=1,
 # Alrao Parameters
 parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
-parser.add_argument('--minLR', type=int, default=-10,  # base = -5
+parser.add_argument('--minLR', type=int, default=-5,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
-parser.add_argument('--maxLR', type=int, default=-2,  # base = 0
+parser.add_argument('--maxLR', type=int, default=0,  # base = 0
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
-parser.add_argument('--nb_class', type=int, default=20,
+parser.add_argument('--nb_class', type=int, default=10,
                     help='number of classifiers before the switch')
 parser.add_argument('--task', default='classification',
                     help='task to perform default: "classification" {"classification", "regression"}')
