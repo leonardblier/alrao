@@ -132,7 +132,7 @@ class L2LossAdditional(_Loss):
     def forward(self, input, target):
         mu_i, pi_i = input
         mu_i = mu_i.transpose(1, 2).transpose(0, 1)
-        loss_per_cl = ((mu_i - target).pow(2).sum(2).sum(1) / (2 * self.sigma2)).exp()
+        loss_per_cl = (-(mu_i - target).pow(2).sum(2).sum(1) / (2 * self.sigma2)).exp()
         loss_tot = (loss_per_cl * pi_i).sum() / math.sqrt(2 * math.pi * self.sigma2)
         return -loss_tot.log()
 
