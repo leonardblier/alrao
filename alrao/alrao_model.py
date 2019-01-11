@@ -14,7 +14,7 @@ class AlraoModel(nn.Module):
         nclasses: number of classes in the classification task
         classifier_gen: python class to use to construct the classifiers
         task: either 'classification' or 'regression'
-        loss: loss used in the model
+        loss: loss used in the model (subclass of pytorch's '_Loss')
             loss(output, target, size_average = False) returns the loss embedded into a 0-dim tensor
             the option 'size_average = True' returns the averaged loss
         *args, **kwargs: arguments to be passed to the constructor of 'classifier_gen'

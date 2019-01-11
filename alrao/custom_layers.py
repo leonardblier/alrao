@@ -49,3 +49,14 @@ class LinearClassifierRNN(nn.Module):
         """
         ret = self.decoder(output.view(output.size(0) * output.size(1), output.size(2)))
         return F.log_softmax(ret, dim=1)
+
+class LinearRegressor(nn.Module):
+    """
+    Linear final layer of a regressor
+    """
+    def __init__(self, dim_input, dim_output):
+        super(LinearRegressor, self).__init__()
+        self.layer = nn.Linear(dim_input, dim_output)
+
+    def forward(self, output):
+        return self.layer(output)

@@ -23,7 +23,7 @@ class Switch(nn.Module):
         rule given in algorithm 1 of (B).
 
     Parameters:
-        loss: loss used in the model
+        loss: loss used in the model (subclass of pytorch's '_Loss')
             loss(output, target, size_average = False) returns the loss embedded into a 0-dim tensor
             the option 'size_average = True' returns the averaged loss
     """
@@ -99,7 +99,9 @@ class Switch(nn.Module):
                     self.cl_correct[k] += (torch.max(x, 1)[1]).eq(y.data).sum().item() / y.size(0)
 
         # px is the tensor of the log probabilities of the mini-batch for each classifier
-        logpx = torch.stack([-self.loss(x, y, size_average=True) for x in lst_logpx],
+        #for x in lst_logpx:
+        #    print(self.loss(x, y))
+        logpx = torch.stack([-self.loss(x, y) * len(x) for x in lst_logpx],
                             dim=0).detach()
         from math import isnan
         if any(isnan(p) for p in logpx):
@@ -134,7 +136,8 @@ class Switch(nn.Module):
         if self.task == 'classification':
             return log_sum_exp(torch.stack(lst_logpx, -1) + self.logposterior, dim=-1)
         elif self.task == 'regression':
-            return sum(torch.stack(lst_logpx, -1) * self.logposterior, dim=-1)
+            return torch.stack(lst_logpx, -1), self.logposterior.exp()
+            #return (torch.stack(lst_logpx, -1) * self.logposterior).sum(dim=-1)
 
 
 def log_sum_exp(tensor, dim=None):
