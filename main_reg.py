@@ -82,7 +82,7 @@ pre_output_dim = 100
 func = math.sin
 data_train_size = 1000
 data_test_size = 100
-sigma2 = 10.
+sigma2 = 1.
 
 # Data
 def generate_data(f, input_dim, nb_data):
@@ -287,7 +287,7 @@ def test(epoch):
         targets = test_targets[(i * batch_size):((i + 1) * batch_size)]
         #inputs, targets = Variable(inputs, volatile=True), Variable(targets)
         outputs = net(inputs)
-        loss = criterion(outputs, targets)
+        loss = criterion_add(outputs, targets)
 
         test_loss += loss.item()
 
