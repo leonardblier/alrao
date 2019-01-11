@@ -83,6 +83,7 @@ func = math.sin
 data_train_size = 1000
 data_test_size = 100
 sigma2 = 1.
+eps_log = 1e-10
 
 # Data
 def generate_data(f, input_dim, nb_data):
@@ -125,10 +126,7 @@ class L2LossLog(_Loss):
     def forward(self, input, target):
         ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
                 math.sqrt(2 * math.pi * self.sigma2)
-        print('LossLog')
-        print(ret)
-        #print(ret.log().mean())
-        return -ret.log().mean()
+        return -(ret + eps_log).log().mean()
         #return (input - target).pow(2).sum() / (2 * self.sigma2 * len(input)) + \
         #        .5 * math.log(2 * math.pi * self.sigma2)
 
@@ -148,9 +146,7 @@ class L2LossAdditional(_Loss):
         probas_per_cl = probas_per_cl.transpose(0, 1)
         # probas_per_cl: batch_size * nb_classifiers
         probas = (probas_per_cl * ps).sum(1) / math.sqrt(2 * math.pi * self.sigma2)
-        print('LossAdditional')
-        print(probas.log().mean())
-        return -probas.log().mean()
+        return -(probas + eps_log).log().mean()
         """
         mu_i, pi_i = input
         mu_i = mu_i.transpose(1, 2).transpose(0, 1)
