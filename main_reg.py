@@ -123,8 +123,11 @@ class L2LossLog(_Loss):
         self.sigma2 = sigma2
 
     def forward(self, input, target):
-        return (input - target).pow(2).sum() / (2 * self.sigma2 * len(input)) + \
-                .5 * math.log(2 * math.pi * self.sigma2)
+        ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
+                math.sqrt(2 * math.pi * self.sigma2)
+        return -ret.log().mean()
+        #return (input - target).pow(2).sum() / (2 * self.sigma2 * len(input)) + \
+        #        .5 * math.log(2 * math.pi * self.sigma2)
 
 # loss adapted to the output of the switch
 class L2LossAdditional(_Loss):
@@ -133,12 +136,19 @@ class L2LossAdditional(_Loss):
         self.sigma2 = sigma2
 
     def forward(self, input, target):
+        means, ps = input
+        # means: batch_size * out_size * nb_classifiers
+        probas_per_cl = (-(mu_i - target).pow(2).sum(1) / (2 * self.sigma2 * target.size(0))).exp()
+        # probas_per_cl: batch_size * nb_classifiers
+        probas = (probas_per_cl * ps).sum(1) / math.sqrt(2 * math.pi * self.sigma2)
+        return -probas.log().mean()
+        """
         mu_i, pi_i = input
         mu_i = mu_i.transpose(1, 2).transpose(0, 1)
         loss_per_cl = (-(mu_i - target).pow(2).sum(2).sum(1) / (2 * self.sigma2 * target.size(0))).exp()
         loss_tot = (loss_per_cl * pi_i).sum() / math.sqrt(2 * math.pi * self.sigma2)
         return -loss_tot.log()
-
+        """
 
 # Model (pre-classifier)
 class RegModel(nn.Module):
