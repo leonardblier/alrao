@@ -125,6 +125,8 @@ class L2LossLog(_Loss):
     def forward(self, input, target):
         ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
                 math.sqrt(2 * math.pi * self.sigma2)
+        print('LossLog')
+        print(ret.log().mean())
         return -ret.log().mean()
         #return (input - target).pow(2).sum() / (2 * self.sigma2 * len(input)) + \
         #        .5 * math.log(2 * math.pi * self.sigma2)
@@ -145,6 +147,7 @@ class L2LossAdditional(_Loss):
         probas_per_cl = probas_per_cl.transpose(0, 1)
         # probas_per_cl: batch_size * nb_classifiers
         probas = (probas_per_cl * ps).sum(1) / math.sqrt(2 * math.pi * self.sigma2)
+        print('LossAdditional')
         print(probas.log().mean())
         return -probas.log().mean()
         """
