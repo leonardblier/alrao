@@ -61,9 +61,9 @@ parser.add_argument('--size_multiplier', type=int, default=1,
 # Alrao Parameters
 parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
-parser.add_argument('--minLR', type=int, default=-10,  # base = -5
+parser.add_argument('--minLR', type=int, default=-5,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
-parser.add_argument('--maxLR', type=int, default=-4,  # base = 0
+parser.add_argument('--maxLR', type=int, default=0,  # base = 0
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
 parser.add_argument('--nb_class', type=int, default=10,
                     help='number of classifiers before the switch')
@@ -82,7 +82,7 @@ pre_output_dim = 100
 func = math.sin
 data_train_size = 1000
 data_test_size = 100
-sigma2 = 10.
+sigma2 = 1.
 eps_log = 0. #1e-32
 
 # Data
@@ -91,7 +91,7 @@ def generate_data(f, input_dim, nb_data):
     if use_cuda:
         proto = proto.cuda()
 
-    inputs = proto.new().resize_(nb_data).normal_()
+    inputs = proto.new().resize_(nb_data).uniform_(-math.pi, math.pi)
     dataset = proto.new().resize_(nb_data, input_dim)
     targets = proto.new().resize_(nb_data, 1)
     for i in range(input_dim):
