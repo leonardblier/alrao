@@ -126,7 +126,8 @@ class L2LossLog(_Loss):
         ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
                 math.sqrt(2 * math.pi * self.sigma2)
         print('LossLog')
-        print(ret.log().mean())
+        print(ret)
+        #print(ret.log().mean())
         return -ret.log().mean()
         #return (input - target).pow(2).sum() / (2 * self.sigma2 * len(input)) + \
         #        .5 * math.log(2 * math.pi * self.sigma2)
