@@ -47,7 +47,7 @@ parser.add_argument('--model_name', default='GoogLeNet',
                     help='Model {VGG19, GoogLeNet, MobileNetV2, SENet18}')
 parser.add_argument('--optimizer', default='SGD',
                     help='optimizer (default: SGD) {Adam, SGD}')
-parser.add_argument('--lr', type=float, default=.01,
+parser.add_argument('--lr', type=float, default=0.00001,
                     help='learning rate, when used without alrao')
 parser.add_argument('--momentum', type=float, default=0.,
                     help='momentum')
@@ -61,13 +61,13 @@ parser.add_argument('--size_multiplier', type=int, default=1,
 # Alrao Parameters
 parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
-parser.add_argument('--minLR', type=int, default=-12,  # base = -5
+parser.add_argument('--minLR', type=int, default=-10,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
-parser.add_argument('--maxLR', type=int, default=-3,  # base = 0
+parser.add_argument('--maxLR', type=int, default=3,  # base = 0
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
 parser.add_argument('--nb_class', type=int, default=20,
                     help='number of classifiers before the switch')
-parser.add_argument('--task', default='classification',
+parser.add_argument('--task', default='regression',
                     help='task to perform default: "classification" {"classification", "regression"}')
 
 args = parser.parse_args()
@@ -79,12 +79,13 @@ best_acc = 0  # best test accuracy
 batch_size = 32
 input_dim = 10
 pre_output_dim = 100
-func = math.sin
 data_train_size = 1000
 data_test_size = 100
-sigma2 = 500.
+sigma2 = 1.
 eps_log = 0. #1e-32
 remove_non_numerical = True
+bound = math.pi
+func = lambda x: math.sin(x * bound)
 
 def is_numerical(x):
     s = x.sum()
@@ -102,7 +103,7 @@ def generate_data(f, input_dim, nb_data):
     if use_cuda:
         proto = proto.cuda()
 
-    inputs = proto.new().resize_(nb_data).uniform_(-math.pi, math.pi)
+    inputs = proto.new().resize_(nb_data).uniform_(-1., 1.)
     dataset = proto.new().resize_(nb_data, input_dim)
     targets = proto.new().resize_(nb_data, 1)
     for i in range(input_dim):
@@ -153,6 +154,11 @@ class L2LossAdditional(_Loss):
 
     def forward(self, input, target):
         means, ps = input
+        if means.size(2) == 1:
+            means = means[:, :, 0]
+            return ((means - target).pow(2).sum(1) / (2 * self.sigma2)).mean() + \
+                    .5 * math.log(2 * math.pi * self.sigma2)
+            
         # means: batch_size * out_size * nb_classifiers
         means = means.transpose(2, 1).transpose(1, 0)
         # means: nb_classifiers * batch_size * out_size
@@ -199,16 +205,18 @@ class StandardModel(nn.Module):
         return self.classifier(x)
 
 class StandardModelReg(nn.Module):
-    def __init__(self, preclassifier, loss):
+    def __init__(self, preclassifier):
         super(StandardModelReg, self).__init__()
         self.preclassifier = preclassifier
         self.regressor = LinearRegressor(self.preclassifier.linearinputdim, 1)
-        self.loss = loss
 
-    def forward(self, input, target):
-        x = self.preclassifier(input)
+    def forward(self, x):
+        #print(x)
+        x = self.preclassifier(x)
+        #print(x)
         x = self.regressor(x)
-        return self.loss(x, target)
+        #print(x)
+        return x.unsqueeze(2), x.new().resize_(1).fill_(1.)
 
 base_lr = args.lr
 minlr = 10 ** args.minLR
@@ -226,7 +234,10 @@ if args.use_alrao:
                        for p in lcparams)
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 else:
-    net = StandardModel(preclassifier)
+    if args.task == 'classification':
+        net = StandardModel(preclassifier)
+    elif args.task == 'regression':
+        net = StandardModelReg(preclassifier)
     total_param = sum(np.prod(p.size()) for p in net.parameters())
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 
@@ -287,6 +298,7 @@ def train(epoch):
         # inputs, targets = Variable(inputs), Variable(targets)
 
         outputs = net(inputs)
+        #print(outputs)
 
         loss = criterion_add(outputs, targets)
         loss.backward()
