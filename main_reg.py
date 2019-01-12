@@ -47,7 +47,7 @@ parser.add_argument('--model_name', default='GoogLeNet',
                     help='Model {VGG19, GoogLeNet, MobileNetV2, SENet18}')
 parser.add_argument('--optimizer', default='SGD',
                     help='optimizer (default: SGD) {Adam, SGD}')
-parser.add_argument('--lr', type=float, default=0.00001,
+parser.add_argument('--lr', type=float, default=0.01,
                     help='learning rate, when used without alrao')
 parser.add_argument('--momentum', type=float, default=0.,
                     help='momentum')
@@ -59,7 +59,7 @@ parser.add_argument('--size_multiplier', type=int, default=1,
                     help='multiplier of the number of neurons per layer (default: 1)')
 
 # Alrao Parameters
-parser.add_argument('--use_alrao', action='store_true', default=True,
+parser.add_argument('--use_alrao', action='store_true', default=False,
                     help='multiple learning rates')
 parser.add_argument('--minLR', type=int, default=-10,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
