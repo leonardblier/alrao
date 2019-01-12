@@ -101,7 +101,7 @@ class Switch(nn.Module):
         # px is the tensor of the log probabilities of the mini-batch for each classifier
         #for x in lst_logpx:
         #    print(self.loss(x, y))
-        logpx = torch.stack([-self.loss(x, y) * len(x) for x in lst_logpx],
+        logpx = torch.stack([-self.loss(x, y) for x in lst_logpx],
                             dim=0).detach()
         from math import isnan
         if any(isnan(p) for p in logpx):
