@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from .switch import Switch
 
+import pdb
 
 class AlraoModel(nn.Module):
     r"""
@@ -121,7 +122,9 @@ class AlraoModel(nn.Module):
             *args, **kwargs: arguments to be passed to the forward method of the pre classifier
         """
         x = self.preclassifier(*args, **kwargs)
-
+        #pdb.set_trace()
+        if not torch.isfinite(x).all():
+            raise ValueError
         z = x
         if isinstance(z, tuple):
             z = x[0]
@@ -132,6 +135,7 @@ class AlraoModel(nn.Module):
 
         if isinstance(x, tuple):
             out = (out,) + x[1:]
+        #pdb.set_trace()
         return out
 
     def update_switch(self, y, x=None, catch_up=False):

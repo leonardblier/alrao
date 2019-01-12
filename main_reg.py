@@ -29,6 +29,9 @@ from alrao.alrao_model import AlraoModel
 # TO BE REMOVED
 from alrao.utils import Subset
 
+from math import isnan
+import pdb
+
 
 parser = argparse.ArgumentParser(description='alrao')
 
@@ -73,7 +76,7 @@ parser.add_argument('--task', default='classification',
 args = parser.parse_args()
 
 
-use_cuda = torch.cuda.is_available()
+use_cuda = False #torch.cuda.is_available()
 best_acc = 0  # best test accuracy
 
 batch_size = 32
@@ -82,7 +85,7 @@ pre_output_dim = 100
 func = math.sin
 data_train_size = 1000
 data_test_size = 100
-sigma2 = 1.
+sigma2 = 500.
 eps_log = 0. #1e-32
 
 # Data
@@ -124,8 +127,13 @@ class L2LossLog(_Loss):
         self.sigma2 = sigma2
 
     def forward(self, input, target):
-        return ((input - target).pow(2).sum(1) / (2 * self.sigma2)).mean() + \
+        if not torch.isfinite(input).all():
+            raise ValueError
+        l = ((input - target).pow(2).sum(1) / (2 * self.sigma2)).mean() + \
                 .5 * math.log(2 * math.pi * self.sigma2)
+        print(f"L2LossLog;l: {l}")
+        return l
+
         #ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
         #        math.sqrt(2 * math.pi * self.sigma2)
         #return -(ret + eps_log).log().mean()
@@ -140,15 +148,19 @@ class L2LossAdditional(_Loss):
 
     def forward(self, input, target):
         means, ps = input
+        if not torch.isfinite(means).all():
+            raise ValueError
         # means: batch_size * out_size * nb_classifiers
         means = means.transpose(2, 1).transpose(1, 0)
         # means: nb_classifiers * batch_size * out_size
-        probas_per_cl = (-(means - target).pow(2).sum(2) / (2 * self.sigma2 * target.size(0))).exp()
+        probas_per_cl = (-(means - target).pow(2).sum(2) / (2 * self.sigma2)).exp()
         # probas_per_cl: nb_classifiers * batch_size
         probas_per_cl = probas_per_cl.transpose(0, 1)
         # probas_per_cl: batch_size * nb_classifiers
         probas = (probas_per_cl * ps).sum(1) / math.sqrt(2 * math.pi * self.sigma2)
-        return -(probas + eps_log).log().mean()
+        l = -(probas + eps_log).log().mean()
+        print("L2LossAdditional;l:{l}")
+        return l
         """
         mu_i, pi_i = input
         mu_i = mu_i.transpose(1, 2).transpose(0, 1)
@@ -264,7 +276,7 @@ def train(epoch):
 
         loss = criterion_add(outputs, targets)
         loss.backward()
-
+        
         if args.use_alrao:
             optimizer.classifiers_zero_grad()
             newx = net.last_x.detach()
@@ -273,6 +285,7 @@ def train(epoch):
                 loss_classifier.backward()
 
         optimizer.step()
+        #pdb.set_trace()
         train_loss += loss.item()
 
         pbar.update(batch_size)

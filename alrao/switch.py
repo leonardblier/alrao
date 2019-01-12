@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
+import pdb
 #TODO : Let choose the hyperparameters of the switch !
 class Switch(nn.Module):
     """
@@ -103,6 +103,7 @@ class Switch(nn.Module):
         #    print(self.loss(x, y))
         logpx = torch.stack([-self.loss(x, y) * len(x) for x in lst_logpx],
                             dim=0).detach()
+        print(' ; '.join('{:.1e}'.format(logp) for logp in logpx))
         from math import isnan
         if any(isnan(p) for p in logpx):
             raise ValueError
