@@ -65,7 +65,7 @@ parser.add_argument('--minLR', type=int, default=-10,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
 parser.add_argument('--maxLR', type=int, default=-2,  # base = 0
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
-parser.add_argument('--nb_class', type=int, default=20,
+parser.add_argument('--nb_class', type=int, default=10,
                     help='number of classifiers before the switch')
 parser.add_argument('--task', default='classification',
                     help='task to perform default: "classification" {"classification", "regression"}')
@@ -73,7 +73,7 @@ parser.add_argument('--task', default='classification',
 args = parser.parse_args()
 
 
-use_cuda = torch.cuda.is_available()
+use_cuda = True #torch.cuda.is_available()
 best_acc = 0  # best test accuracy
 
 batch_size = 32
@@ -82,7 +82,7 @@ pre_output_dim = 100
 func = math.sin
 data_train_size = 1000
 data_test_size = 100
-sigma2 = 1.
+sigma2 = 10.
 eps_log = 0. #1e-32
 
 # Data
