@@ -61,11 +61,11 @@ parser.add_argument('--size_multiplier', type=int, default=1,
 # Alrao Parameters
 parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
-parser.add_argument('--minLR', type=int, default=-10,  # base = -5
+parser.add_argument('--minLR', type=int, default=-12,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
-parser.add_argument('--maxLR', type=int, default=-2,  # base = 0
+parser.add_argument('--maxLR', type=int, default=-3,  # base = 0
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
-parser.add_argument('--nb_class', type=int, default=10,
+parser.add_argument('--nb_class', type=int, default=20,
                     help='number of classifiers before the switch')
 parser.add_argument('--task', default='classification',
                     help='task to perform default: "classification" {"classification", "regression"}')
@@ -82,8 +82,19 @@ pre_output_dim = 100
 func = math.sin
 data_train_size = 1000
 data_test_size = 100
-sigma2 = 10.
+sigma2 = 500.
 eps_log = 0. #1e-32
+remove_non_numerical = True
+
+def is_numerical(x):
+    s = x.sum()
+    if (s == float('inf')).item():
+        return False
+    if (s == float('-inf')).item():
+        return False
+    if s != s:
+        return False
+    return True
 
 # Data
 def generate_data(f, input_dim, nb_data):
@@ -274,7 +285,8 @@ def train(epoch):
             newx = net.last_x.detach()
             for classifier in net.classifiers():
                 loss_classifier = criterion(classifier(newx), targets)
-                loss_classifier.backward()
+                if (not remove_non_numerical) or is_numerical(loss_classifier): 
+                    loss_classifier.backward()
 
         optimizer.step()
         train_loss += loss.item()
