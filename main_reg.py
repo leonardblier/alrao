@@ -198,6 +198,17 @@ class StandardModel(nn.Module):
         x = self.preclassifier(x)
         return self.classifier(x)
 
+class StandardModelReg(nn.Module):
+    def __init__(self, preclassifier, loss):
+        super(StandardModelReg, self).__init__()
+        self.preclassifier = preclassifier
+        self.regressor = LinearRegressor(self.preclassifier.linearinputdim, 1)
+        self.loss = loss
+
+    def forward(self, input, target):
+        x = self.preclassifier(input)
+        x = self.regressor(x)
+        return self.loss(x, target)
 
 base_lr = args.lr
 minlr = 10 ** args.minLR
