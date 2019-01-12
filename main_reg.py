@@ -61,9 +61,9 @@ parser.add_argument('--size_multiplier', type=int, default=1,
 # Alrao Parameters
 parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
-parser.add_argument('--minLR', type=int, default=-12,  # base = -5
+parser.add_argument('--minLR', type=int, default=-10,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
-parser.add_argument('--maxLR', type=int, default=-3,  # base = 0
+parser.add_argument('--maxLR', type=int, default=-2,  # base = 0
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
 parser.add_argument('--nb_class', type=int, default=20,
                     help='number of classifiers before the switch')
@@ -124,6 +124,8 @@ class L2LossLog(_Loss):
         self.sigma2 = sigma2
 
     def forward(self, input, target):
+        #print('L2')
+        #print((input - target).pow(2).sum(1))
         return ((input - target).pow(2).sum(1) / (2 * self.sigma2)).mean() + \
                 .5 * math.log(2 * math.pi * self.sigma2)
         #ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
@@ -143,7 +145,9 @@ class L2LossAdditional(_Loss):
         # means: batch_size * out_size * nb_classifiers
         means = means.transpose(2, 1).transpose(1, 0)
         # means: nb_classifiers * batch_size * out_size
-        probas_per_cl = (-(means - target).pow(2).sum(2) / (2 * self.sigma2 * target.size(0))).exp()
+        #print('L2Add')
+        #print((means - target).pow(2).sum(2))
+        probas_per_cl = (-(means - target).pow(2).sum(2) / (2 * self.sigma2)).exp() # * target.size(0)
         # probas_per_cl: nb_classifiers * batch_size
         probas_per_cl = probas_per_cl.transpose(0, 1)
         # probas_per_cl: batch_size * nb_classifiers
