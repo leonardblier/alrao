@@ -23,6 +23,7 @@ from models import GoogLeNet, MobileNetV2, VGG, SENet18
 from alrao.custom_layers import LinearClassifier, LinearRegressor
 from alrao.optim_spec import SGDAlrao, AdamAlrao
 from alrao.learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
+from alrao.switch import log_sum_exp
 
 from alrao.earlystopping import EarlyStopping
 from alrao.alrao_model import AlraoModel
@@ -50,7 +51,7 @@ parser.add_argument('--model_name', default='GoogLeNet',
                     help='Model {VGG19, GoogLeNet, MobileNetV2, SENet18}')
 parser.add_argument('--optimizer', default='SGD',
                     help='optimizer (default: SGD) {Adam, SGD}')
-parser.add_argument('--lr', type=float, default=.01,
+parser.add_argument('--lr', type=float, default=0.01,
                     help='learning rate, when used without alrao')
 parser.add_argument('--momentum', type=float, default=0.,
                     help='momentum')
@@ -64,29 +65,42 @@ parser.add_argument('--size_multiplier', type=int, default=1,
 # Alrao Parameters
 parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
-parser.add_argument('--minLR', type=int, default=-12,  # base = -5
+parser.add_argument('--minLR', type=int, default=-10,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
-parser.add_argument('--maxLR', type=int, default=-3,  # base = 0
+parser.add_argument('--maxLR', type=int, default=3,  # base = 0
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
 parser.add_argument('--nb_class', type=int, default=20,
                     help='number of classifiers before the switch')
-parser.add_argument('--task', default='classification',
+parser.add_argument('--task', default='regression',
                     help='task to perform default: "classification" {"classification", "regression"}')
 
 args = parser.parse_args()
 
 
-use_cuda = False #torch.cuda.is_available()
+
+use_cuda = torch.cuda.is_available()
+
 best_acc = 0  # best test accuracy
 
 batch_size = 32
 input_dim = 10
 pre_output_dim = 100
-func = math.sin
 data_train_size = 1000
 data_test_size = 100
-sigma2 = 500.
-eps_log = 0. #1e-32
+sigma2 = 1.
+remove_non_numerical = True
+bound = math.pi
+func = lambda x: math.sin(x * bound)
+
+def is_numerical(x):
+    s = x.sum()
+    if (s == float('inf')).item():
+        return False
+    if (s == float('-inf')).item():
+        return False
+    if s != s:
+        return False
+    return True
 
 # Data
 def generate_data(f, input_dim, nb_data):
@@ -94,7 +108,7 @@ def generate_data(f, input_dim, nb_data):
     if use_cuda:
         proto = proto.cuda()
 
-    inputs = proto.new().resize_(nb_data).uniform_(-math.pi, math.pi)
+    inputs = proto.new().resize_(nb_data).uniform_(-1., 1.)
     dataset = proto.new().resize_(nb_data, input_dim)
     targets = proto.new().resize_(nb_data, 1)
     for i in range(input_dim):
@@ -127,18 +141,8 @@ class L2LossLog(_Loss):
         self.sigma2 = sigma2
 
     def forward(self, input, target):
-        if not torch.isfinite(input).all():
-            raise ValueError
-        l = ((input - target).pow(2).sum(1) / (2 * self.sigma2)).mean() + \
+        return ((input - target).pow(2).sum(1) / (2 * self.sigma2)).mean() + \
                 .5 * math.log(2 * math.pi * self.sigma2)
-        print(f"L2LossLog;l: {l}")
-        return l
-
-        #ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
-        #        math.sqrt(2 * math.pi * self.sigma2)
-        #return -(ret + eps_log).log().mean()
-        #return (input - target).pow(2).sum() / (2 * self.sigma2 * len(input)) + \
-        #        .5 * math.log(2 * math.pi * self.sigma2)
 
 # loss adapted to the output of the switch
 class L2LossAdditional(_Loss):
@@ -148,26 +152,17 @@ class L2LossAdditional(_Loss):
 
     def forward(self, input, target):
         means, ps = input
-        if not torch.isfinite(means).all():
-            raise ValueError
         # means: batch_size * out_size * nb_classifiers
         means = means.transpose(2, 1).transpose(1, 0)
         # means: nb_classifiers * batch_size * out_size
-        probas_per_cl = (-(means - target).pow(2).sum(2) / (2 * self.sigma2)).exp()
-        # probas_per_cl: nb_classifiers * batch_size
-        probas_per_cl = probas_per_cl.transpose(0, 1)
-        # probas_per_cl: batch_size * nb_classifiers
-        probas = (probas_per_cl * ps).sum(1) / math.sqrt(2 * math.pi * self.sigma2)
-        l = -(probas + eps_log).log().mean()
-        print("L2LossAdditional;l:{l}")
-        return l
-        """
-        mu_i, pi_i = input
-        mu_i = mu_i.transpose(1, 2).transpose(0, 1)
-        loss_per_cl = (-(mu_i - target).pow(2).sum(2).sum(1) / (2 * self.sigma2 * target.size(0))).exp()
-        loss_tot = (loss_per_cl * pi_i).sum() / math.sqrt(2 * math.pi * self.sigma2)
-        return -loss_tot.log()
-        """
+        log_probas_per_cl = -(means - target).pow(2).sum(2) / (2 * self.sigma2) - \
+                .5 * math.log(2 * math.pi * self.sigma2)
+        # log_probas_per_cl: nb_classifiers * batch_size
+        log_probas_per_cl = log_probas_per_cl.transpose(0, 1)
+        # log_probas_per_cl: batch_size * nb_classifiers
+        log_probas_per_cl = log_probas_per_cl + ps.log()
+        log_probas = log_sum_exp(log_probas_per_cl, dim = 1)
+        return -log_probas.mean()
 
 # Model (pre-classifier)
 class RegModel(nn.Module):
@@ -195,6 +190,16 @@ class StandardModel(nn.Module):
         x = self.preclassifier(x)
         return self.classifier(x)
 
+class StandardModelReg(nn.Module):
+    def __init__(self, preclassifier):
+        super(StandardModelReg, self).__init__()
+        self.preclassifier = preclassifier
+        self.regressor = LinearRegressor(self.preclassifier.linearinputdim, 1)
+
+    def forward(self, x):
+        x = self.preclassifier(x)
+        x = self.regressor(x)
+        return x.unsqueeze(2), x.new().resize_(1).fill_(1.)
 
 base_lr = args.lr
 minlr = 10 ** args.minLR
@@ -212,7 +217,10 @@ if args.use_alrao:
                        for p in lcparams)
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 else:
-    net = StandardModel(preclassifier)
+    if args.task == 'classification':
+        net = StandardModel(preclassifier)
+    elif args.task == 'regression':
+        net = StandardModelReg(preclassifier)
     total_param = sum(np.prod(p.size()) for p in net.parameters())
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 
@@ -273,19 +281,20 @@ def train(epoch):
         # inputs, targets = Variable(inputs), Variable(targets)
 
         outputs = net(inputs)
+        #print(outputs)
 
         loss = criterion_add(outputs, targets)
         loss.backward()
-        
+
         if args.use_alrao:
             optimizer.classifiers_zero_grad()
             newx = net.last_x.detach()
             for classifier in net.classifiers():
                 loss_classifier = criterion(classifier(newx), targets)
-                loss_classifier.backward()
+                if (not remove_non_numerical) or is_numerical(loss_classifier): 
+                    loss_classifier.backward()
 
         optimizer.step()
-        #pdb.set_trace()
         train_loss += loss.item()
 
         pbar.update(batch_size)

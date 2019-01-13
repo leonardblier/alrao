@@ -101,7 +101,7 @@ class Switch(nn.Module):
         # px is the tensor of the log probabilities of the mini-batch for each classifier
         #for x in lst_logpx:
         #    print(self.loss(x, y))
-        logpx = torch.stack([-self.loss(x, y) * len(x) for x in lst_logpx],
+        logpx = torch.stack([-self.loss(x, y) for x in lst_logpx],
                             dim=0).detach()
         print(' ; '.join('{:.1e}'.format(logp) for logp in logpx))
         from math import isnan
@@ -138,7 +138,6 @@ class Switch(nn.Module):
             return log_sum_exp(torch.stack(lst_logpx, -1) + self.logposterior, dim=-1)
         elif self.task == 'regression':
             return torch.stack(lst_logpx, -1), self.logposterior.exp()
-            #return (torch.stack(lst_logpx, -1) * self.logposterior).sum(dim=-1)
 
 
 def log_sum_exp(tensor, dim=None):
