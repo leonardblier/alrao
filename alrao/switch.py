@@ -137,7 +137,6 @@ class Switch(nn.Module):
             return log_sum_exp(torch.stack(lst_logpx, -1) + self.logposterior, dim=-1)
         elif self.task == 'regression':
             return torch.stack(lst_logpx, -1), self.logposterior.exp()
-            #return (torch.stack(lst_logpx, -1) * self.logposterior).sum(dim=-1)
 
 
 def log_sum_exp(tensor, dim=None):

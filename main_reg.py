@@ -23,6 +23,7 @@ from models import GoogLeNet, MobileNetV2, VGG, SENet18
 from alrao.custom_layers import LinearClassifier, LinearRegressor
 from alrao.optim_spec import SGDAlrao, AdamAlrao
 from alrao.learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
+from alrao.switch import log_sum_exp
 
 from alrao.earlystopping import EarlyStopping
 from alrao.alrao_model import AlraoModel
@@ -59,7 +60,7 @@ parser.add_argument('--size_multiplier', type=int, default=1,
                     help='multiplier of the number of neurons per layer (default: 1)')
 
 # Alrao Parameters
-parser.add_argument('--use_alrao', action='store_true', default=False,
+parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
 parser.add_argument('--minLR', type=int, default=-10,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
@@ -82,7 +83,6 @@ pre_output_dim = 100
 data_train_size = 1000
 data_test_size = 100
 sigma2 = 1.
-eps_log = 0. #1e-32
 remove_non_numerical = True
 bound = math.pi
 func = lambda x: math.sin(x * bound)
@@ -136,15 +136,8 @@ class L2LossLog(_Loss):
         self.sigma2 = sigma2
 
     def forward(self, input, target):
-        #print('L2')
-        #print((input - target).pow(2).sum(1))
         return ((input - target).pow(2).sum(1) / (2 * self.sigma2)).mean() + \
                 .5 * math.log(2 * math.pi * self.sigma2)
-        #ret = (-(input - target).pow(2).sum(1) / (2 * self.sigma2)).exp() / \
-        #        math.sqrt(2 * math.pi * self.sigma2)
-        #return -(ret + eps_log).log().mean()
-        #return (input - target).pow(2).sum() / (2 * self.sigma2 * len(input)) + \
-        #        .5 * math.log(2 * math.pi * self.sigma2)
 
 # loss adapted to the output of the switch
 class L2LossAdditional(_Loss):
@@ -154,29 +147,17 @@ class L2LossAdditional(_Loss):
 
     def forward(self, input, target):
         means, ps = input
-        if means.size(2) == 1:
-            means = means[:, :, 0]
-            return ((means - target).pow(2).sum(1) / (2 * self.sigma2)).mean() + \
-                    .5 * math.log(2 * math.pi * self.sigma2)
-            
         # means: batch_size * out_size * nb_classifiers
         means = means.transpose(2, 1).transpose(1, 0)
         # means: nb_classifiers * batch_size * out_size
-        #print('L2Add')
-        #print((means - target).pow(2).sum(2))
-        probas_per_cl = (-(means - target).pow(2).sum(2) / (2 * self.sigma2)).exp() # * target.size(0)
-        # probas_per_cl: nb_classifiers * batch_size
-        probas_per_cl = probas_per_cl.transpose(0, 1)
-        # probas_per_cl: batch_size * nb_classifiers
-        probas = (probas_per_cl * ps).sum(1) / math.sqrt(2 * math.pi * self.sigma2)
-        return -(probas + eps_log).log().mean()
-        """
-        mu_i, pi_i = input
-        mu_i = mu_i.transpose(1, 2).transpose(0, 1)
-        loss_per_cl = (-(mu_i - target).pow(2).sum(2).sum(1) / (2 * self.sigma2 * target.size(0))).exp()
-        loss_tot = (loss_per_cl * pi_i).sum() / math.sqrt(2 * math.pi * self.sigma2)
-        return -loss_tot.log()
-        """
+        log_probas_per_cl = -(means - target).pow(2).sum(2) / (2 * self.sigma2) - \
+                .5 * math.log(2 * math.pi * self.sigma2)
+        # log_probas_per_cl: nb_classifiers * batch_size
+        log_probas_per_cl = log_probas_per_cl.transpose(0, 1)
+        # log_probas_per_cl: batch_size * nb_classifiers
+        log_probas_per_cl = log_probas_per_cl + ps.log()
+        log_probas = log_sum_exp(log_probas_per_cl, dim = 1)
+        return -log_probas.mean()
 
 # Model (pre-classifier)
 class RegModel(nn.Module):
@@ -211,11 +192,8 @@ class StandardModelReg(nn.Module):
         self.regressor = LinearRegressor(self.preclassifier.linearinputdim, 1)
 
     def forward(self, x):
-        #print(x)
         x = self.preclassifier(x)
-        #print(x)
         x = self.regressor(x)
-        #print(x)
         return x.unsqueeze(2), x.new().resize_(1).fill_(1.)
 
 base_lr = args.lr
