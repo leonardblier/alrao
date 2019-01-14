@@ -1,0 +1,55 @@
+torch.manual_seed(193062818), 1000 epochs:
+alrao:
+	LossTest: 0.921665788
+	LossTest: 0.921659966
+	LossTest: 0.921654185
+	LossTest: 0.921648443
+std:
+	LossTest: 0.921665788
+	LossTest: 0.921659966
+	LossTest: 0.921654185
+	LossTest: 0.921648463
+
+torch.manual_seed(193062818), 1200 epochs:
+alrao:
+	LossTest: 0.920736194
+	LossTest: 0.920732637
+	LossTest: 0.920728942
+	LossTest: 0.920725187
+	LossTest: 0.920721531
+std:
+	LossTest: 0.920736194
+	LossTest: 0.920732677
+	LossTest: 0.920728942
+	LossTest: 0.920725187
+	LossTest: 0.920721531
+
+torch.manual_seed(193062818), 200 epochs:
+alrao:
+	LossTest: 0.959755341
+	LossTest: 0.959438543
+	LossTest: 0.959124605
+	LossTest: 0.958813488
+	LossTest: 0.958505233
+std:
+	LossTest: 0.959755341
+	LossTest: 0.959438543
+	LossTest: 0.959124585
+	LossTest: 0.958813488
+	LossTest: 0.958505233
+
+torch.manual_seed(5383653), 200 epochs:
+alrao:
+	LossTest: 0.965071837
+	LossTest: 0.964768052
+	LossTest: 0.964466075
+	LossTest: 0.964166443
+	LossTest: 0.963868916
+
+std:
+	LossTest: 0.965071817
+	LossTest: 0.964768052
+	LossTest: 0.964466075
+	LossTest: 0.964166423
+	LossTest: 0.963868896
+
