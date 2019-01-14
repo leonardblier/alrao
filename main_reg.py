@@ -38,7 +38,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disable cuda')
 
 # epochs
-parser.add_argument('--epochs', type=int, default=50,
+parser.add_argument('--epochs', type=int, default=200,
                     help='number of epochs for phase 1 (default: 50)')
 parser.add_argument('--early_stopping', action='store_true', default=False,
                     help='use early stopping')
@@ -48,7 +48,7 @@ parser.add_argument('--model_name', default='GoogLeNet',
                     help='Model {VGG19, GoogLeNet, MobileNetV2, SENet18}')
 parser.add_argument('--optimizer', default='SGD',
                     help='optimizer (default: SGD) {Adam, SGD}')
-parser.add_argument('--lr', type=float, default=0.01,
+parser.add_argument('--lr', type=float, default=.001,
                     help='learning rate, when used without alrao')
 parser.add_argument('--momentum', type=float, default=0.,
                     help='momentum')
@@ -62,17 +62,18 @@ parser.add_argument('--size_multiplier', type=int, default=1,
 # Alrao Parameters
 parser.add_argument('--use_alrao', action='store_true', default=True,
                     help='multiple learning rates')
-parser.add_argument('--minLR', type=int, default=-10,  # base = -5
+parser.add_argument('--minLR', type=int, default=-3,  # base = -5
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
-parser.add_argument('--maxLR', type=int, default=3,  # base = 0
+parser.add_argument('--maxLR', type=int, default=-3,  # base = 0
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
-parser.add_argument('--nb_class', type=int, default=20,
+parser.add_argument('--nb_class', type=int, default=1,
                     help='number of classifiers before the switch')
 parser.add_argument('--task', default='regression',
                     help='task to perform default: "classification" {"classification", "regression"}')
 
 args = parser.parse_args()
 
+torch.manual_seed(193062818)
 
 use_cuda = True #torch.cuda.is_available()
 best_acc = 0  # best test accuracy
@@ -328,7 +329,7 @@ def test(epoch):
 
         test_loss += loss.item()
 
-    print('\tLossTest: %.4f' % (test_loss/(i + 1)))
+    print('\tLossTest: %.9f' % (test_loss/(i + 1)))
     if args.use_alrao:
         print(("Posterior : "+"{:.1e}, " * args.nb_class).format(*net.posterior()))
 
