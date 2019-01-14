@@ -29,7 +29,7 @@ def lr_sampler_generic(minlr, maxlr):
         lr = tensor.new(size).uniform_()
         lr = (lr * (np.log(maxlr) - np.log(minlr)) + np.log(minlr)).exp()
         #lr.fill_(base_lr)
-        return lr
+        return lr.cuda()
 
     return f
 
@@ -46,7 +46,7 @@ def generator_randomlr_linconv(module, lr_sampler, memo):
     memo.add(module.weight)
     w = module.weight
     lrb = lr_sampler(w, w.size()[:1])
-    lrw = w.new(w.size())
+    lrw = lrb.new(w.size())
     for k in range(w.size()[0]):
         lrw[k].fill_(lrb[k])
     yield lrw

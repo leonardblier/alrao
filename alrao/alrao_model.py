@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from .switch import Switch
+import numpy as np
 
 import pdb
 
@@ -34,6 +35,11 @@ class AlraoModel(nn.Module):
 
         self.last_x, self.last_lst_logpx = None, None
 
+
+    
+    def input_shape(self):
+        return self.preclassifier.input_shape()
+    
     def method_fwd_preclassifier(self, method_name_src, method_name_dst=None):
         r"""
         Allows the user to call directly a method of the pre-classifier.
@@ -109,7 +115,7 @@ class AlraoModel(nn.Module):
         for cl in self.classifiers():
             cl.reset_parameters()
 
-    def forward(self, *args, **kwargs):
+    def forward(self, *args, return_posterior=False, **kwargs):
         r"""
         Gives an input to the pre-classifier, then gives its output to each classifier,
             averages their output with 'switch', a model averaging method.
@@ -131,25 +137,29 @@ class AlraoModel(nn.Module):
 
         lst_logpx = [cl(z) for cl in self.classifiers()]
         self.last_x, self.last_lst_logpx = z, lst_logpx
-        out = self.switch.forward(lst_logpx)
+        out = self.switch.forward(lst_logpx, return_posterior=return_posterior)
+
 
         if isinstance(x, tuple):
             out = (out,) + x[1:]
         #pdb.set_trace()
+
+        # pdb.set_trace()
         return out
 
-    def update_switch(self, y, x=None, catch_up=False):
+    def update_switch(self, lst_loss_classifier, catch_up=False):#y, x=None, ):
         """
         Updates the model averaging weights
         """
-        if x is None:
-            lst_px = self.last_lst_logpx
-        else:
-            lst_px = [cl(x) for cl in self.classifiers()]
-        self.switch.Supdate(lst_px, y)
+        # if x is None:
+        #     lst_px = self.last_lst_logpx
+        # else:
+        #     lst_px = [cl(x) for cl in self.classifiers()]
+        self.switch.Supdate(-lst_loss_classifier)
 
         if catch_up:
             self.hard_catch_up()
+        # print(f'Posterior: '+ ' ; '.join(f'{p:.1e}' for p in self.posterior()))
 
     def hard_catch_up(self, threshold=-20):
         """
@@ -216,3 +226,29 @@ class AlraoModel(nn.Module):
         bars = u' ▁▂▃▄▅▆▇█'
         res = "|"+"".join(bars[int(px)] for px in post/post.max() * 8) + "|"
         return res
+
+    def monitoring(self):
+        norm_preclassifier = np.sqrt(
+            sum(p.pow(2).sum().detach().cpu().numpy() for p in self.parameters_preclassifier())
+            )
+        norm_classifier = np.sqrt(
+            sum(
+                sum(p.pow(2).sum().detach().cpu().numpy() for p in clparam)
+                for clparam in self.classifiers_parameters_list()
+                )
+            )
+        print(f'l2preclassifier:{norm_preclassifier:.4e} \tl2classifiers:{norm_classifier:.4e}')
+
+
+
+
+
+
+
+
+
+
+
+
+
+

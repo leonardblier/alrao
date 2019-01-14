@@ -82,7 +82,7 @@ class Switch(nn.Module):
         """
         return 1 / (t + 1) #(1.-self.alpha)
 
-    def Supdate(self, lst_logpx, y):
+    def Supdate(self, logpx):
         """
         Switch update rule given in algorithm 1 of (B).
 
@@ -91,19 +91,20 @@ class Switch(nn.Module):
                 tensors of log-probabilities
             y: tensor of targets
         """
-        if self.save_cl_perf:
-            self.cl_total += 1
-            for (k, x) in enumerate(lst_logpx):
-                self.cl_loss[k] += self.loss(x, y).item()
-                if self.task == 'classification':
-                    self.cl_correct[k] += (torch.max(x, 1)[1]).eq(y.data).sum().item() / y.size(0)
+        # if self.save_cl_perf:
+        #     self.cl_total += 1
+        #     for (k, x) in enumerate(lst_logpx):
+        #         self.cl_loss[k] += self.loss(x, y).item()
+        #         if self.task == 'classification':
+        #             self.cl_correct[k] += (torch.max(x, 1)[1]).eq(y.data).sum().item() / y.size(0)
 
         # px is the tensor of the log probabilities of the mini-batch for each classifier
         #for x in lst_logpx:
         #    print(self.loss(x, y))
-        logpx = torch.stack([-self.loss(x, y) for x in lst_logpx],
-                            dim=0).detach()
-        print(' ; '.join('{:.1e}'.format(logp) for logp in logpx))
+        # logpx = torch.stack([-self.loss(x, y) for x in lst_logpx],
+        #                     dim=0).detach()
+        
+        # print(' ; '.join('{:.1e}'.format(logp) for logp in logpx))
         from math import isnan
         if any(isnan(p) for p in logpx):
             raise ValueError
@@ -124,9 +125,12 @@ class Switch(nn.Module):
 
         self.logw -= log_sum_exp(self.logw)
         self.logposterior = log_sum_exp(self.logw, dim=0)
+        # print(f'Posterior: '+ ' ; '.join(f'{p:.1e}' for p in self.logposterior.exp()))
+        if self.logposterior.exp().sum() > 1.01:
+            stop
         self.t += 1
 
-    def forward(self, lst_logpx):
+    def forward(self, lst_logpx, return_posterior=False):
         """
         Computes the average of the outputs of the different models.
 
@@ -137,7 +141,11 @@ class Switch(nn.Module):
         if self.task == 'classification':
             return log_sum_exp(torch.stack(lst_logpx, -1) + self.logposterior, dim=-1)
         elif self.task == 'regression':
-            return torch.stack(lst_logpx, -1), self.logposterior.exp()
+            # pdb.set_trace()
+            if not return_posterior:
+                return lst_logpx[self.logposterior.argmax()].squeeze()
+            else:
+                return torch.stack(lst_logpx, -1).squeeze(), self.logposterior
 
 
 def log_sum_exp(tensor, dim=None):
