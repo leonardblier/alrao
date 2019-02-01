@@ -15,7 +15,7 @@ import torch.optim as optim
 
 class AdamSpec(optim.Optimizer):
     """
-    Adam modification for the preclassifier with Alrao
+    Adam modification for the internal NN with Alrao
 
     Arguments:
         params: Iterator over the parameters
@@ -98,7 +98,7 @@ class AdamSpec(optim.Optimizer):
 
 class SGDSpec(optim.Optimizer):
     """
-    SGD modification for the preclassifier with Alrao
+    SGD modification for the internal NN with Alrao
 
     Arguments:
         params: Iterator over the parameters
@@ -232,8 +232,6 @@ class SGDRandDirWeightsSpec(optim.Optimizer):
                 p.data.add(-1, update.view(size))
 
 
-
-
 class OptAlrao:
     """
     Generic class for Alrao's optimisation methods.
@@ -245,19 +243,19 @@ class OptAlrao:
         self.posterior = posterior
 
     def step(self):
-        if self.optpreclassifier is not None:
-            self.optpreclassifier.step()
-        for optclassifier in self.optclassifiers:
-            optclassifier.step()
+        if self.opt_internal_nn is not None:
+            self.opt_internal_nn.step()
+        for opt_last_layer in self.opt_last_layers:
+            opt_last_layer.step()
 
-    def classifiers_zero_grad(self):
-        for opt in self.optclassifiers:
+    def last_layers_zero_grad(self):
+        for opt in self.opt_last_layers:
             opt.zero_grad()
 
     def zero_grad(self):
-        if self.optpreclassifier is not None:
-            self.optpreclassifier.zero_grad()
-        for opt in self.optclassifiers:
+        if self.opt_internal_nn is not None:
+            self.opt_internal_nn.zero_grad()
+        for opt in self.opt_last_layers:
             opt.zero_grad()
 
 
@@ -265,39 +263,39 @@ class SGDAlrao(OptAlrao):
     """
     Alrao-SGD optimisation method.
     Arguments:
-        parameters_preclassifiers: iterator over the preclassifier parameters
-        lr_preclassifier: Iterator over the preclassifier learning rates
-        classifier_parameters_list: List of iterators over each classifier parameters
-        classifiers_lr: List of iterators over each classifier learning rates
+        parameters_internal_nn: iterator over the internal NN parameters
+        lr_internal_nn: Iterator over the internal NN learning rates
+        last_layer_parameters_list: List of iterators over each last_layer parameters
+        last_layers_lr: List of iterators over each last layer learning rates
         other: as normal SGD
     """
-    def __init__(self, parameters_preclassifier, lr_preclassifier, classifiers_parameters_list,
-                 classifiers_lr, momentum=0., weight_decay=0.):
+    def __init__(self, parameters_internal_nn, lr_internal_nn, last_layers_parameters_list,
+                 last_layers_lr, momentum=0., weight_decay=0.):
 
         super(SGDAlrao, self).__init__()
-        self.optpreclassifier = SGDSpec(parameters_preclassifier, lr_preclassifier,
+        self.opt_internal_nn = SGDSpec(parameters_internal_nn, lr_internal_nn,
                                         momentum=momentum, weight_decay=weight_decay)
-        self.classifiers_lr = classifiers_lr
-        self.optclassifiers = \
+        self.last_layers_lr = last_layers_lr
+        self.opt_last_layers = \
             [optim.SGD(parameters, lr, momentum=momentum, weight_decay=weight_decay) \
-             for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
+             for parameters, lr in zip(last_layers_parameters_list, last_layers_lr)]
 
 
 class AdamAlrao(OptAlrao):
     """
     Alrao-SGD optimisation method.
     Arguments:
-        parameters_preclassifiers: iterator over the preclassifier parameters
-        lr_preclassifier: Iterator over the preclassifier learning rates
-        classifier_parameters_list: List of iterators over each classifier parameters
-        classifiers_lr: List of iterators over each classifier learning rates
+        parameters_internal_nn: iterator over the internal NN parameters
+        lr_internal_nn: Iterator over the internal NN learning rates
+        last_layer_parameters_list: List of iterators over each last layer parameters
+        last_layers_lr: List of iterators over each last layer learning rates
         other: as normal Adam
     """
-    def __init__(self, parameters_preclassifier, lr_preclassifier, classifiers_parameters_list,
-                 classifiers_lr, **kwargs):
+    def __init__(self, parameters_internal_nn, lr_internal_nn, last_layers_parameters_list,
+                 last_layers_lr, **kwargs):
 
         super(AdamAlrao, self).__init__()
 
-        self.optpreclassifier = AdamSpec(parameters_preclassifier, lr_preclassifier, **kwargs)
-        self.optclassifiers = [optim.Adam(parameters, lr, **kwargs) \
-             for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
+        self.opt_internal_nn = AdamSpec(parameters_internal_nn, lr_internal_nn, **kwargs)
+        self.opt_last_layers = [optim.Adam(parameters, lr, **kwargs) \
+             for parameters, lr in zip(last_layers_parameters_list, last_layers_lr)]
