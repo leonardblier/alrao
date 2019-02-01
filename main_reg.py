@@ -240,14 +240,10 @@ def train(epoch):
         loss.backward()
 
         if args.use_alrao:
-            optimizer.last_layers_zero_grad()
-            newx = net.last_x.detach()
-            for last_layer in net.last_layers():
-                loss_last_layer = criterion(last_layer(newx), targets)
-                if (not remove_non_numerical) or is_numerical(loss_last_layer): 
-                    loss_last_layer.backward()
+            alrao_step(net, optimizer, criterion, targets, catch_up = False, remove_non_numerical = True) 
+        else:
+            optimizer.step()
 
-        optimizer.step()
         train_loss += loss.item()
 
         pbar.update(batch_size)
@@ -256,9 +252,6 @@ def train(epoch):
         # if args.use_alrao:
         #     postfix["PostSw"] = net.repr_posterior()
         pbar.set_postfix(postfix)
-        if args.use_alrao:
-            net.update_switch(targets, catch_up=False)
-            optimizer.update_posterior(net.posterior())
 
     pbar.close()
 

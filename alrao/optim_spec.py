@@ -13,6 +13,19 @@ import torch
 import torch.optim as optim
 
 
+def alrao_step(net, optimizer, criterion, targets, catch_up = False, remove_non_numerical = True):
+    optimizer.last_layers_zero_grad()
+    newx = net.last_x.detach()
+    for last_layer in net.last_layers():
+        loss_last_layer = criterion(last_layer(newx), targets)
+        if torch.isfinite(loss_last_layer).all() or (not remove_non_numerical): 
+            loss_last_layer.backward()
+
+    optimizer.step()
+    net.update_switch(targets, catch_up)
+    optimizer.update_posterior(net.posterior())
+
+
 class AdamSpec(optim.Optimizer):
     """
     Adam modification for the internal NN with Alrao
