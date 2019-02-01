@@ -121,6 +121,8 @@ class AlraoModel(nn.Module):
             *args, **kwargs: arguments to be passed to the forward method of the pre classifier
         """
         x = self.preclassifier(*args, **kwargs)
+        if not torch.isfinite(x).all():
+            raise ValueError
 
         z = x
         if isinstance(z, tuple):

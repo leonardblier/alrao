@@ -59,4 +59,7 @@ class LinearRegressor(nn.Module):
         self.layer = nn.Linear(dim_input, dim_output)
 
     def forward(self, output):
-        return self.layer(output)
+        y = self.layer(output)
+        if not torch.isfinite(y).all():
+            raise ValueError
+        return y
