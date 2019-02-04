@@ -22,7 +22,7 @@ class AlraoModel(nn.Module):
         super(AlraoModel, self).__init__()
         self.task = task
         self.loss = loss
-        self.switch = Switch(n_last_layers, save_ll_perf=True, task=task, loss=loss)
+        self.switch = Switch(n_last_layers, save_ll_perf = True, task = task, loss = loss)
         self.internal_nn = internal_nn
         self.n_last_layers = n_last_layers
 
@@ -32,7 +32,7 @@ class AlraoModel(nn.Module):
 
         self.last_x, self.last_lst_logpx = None, None
 
-    def method_fwd_internal_nn(self, method_name_src, method_name_dst=None):
+    def method_fwd_internal_nn(self, method_name_src, method_name_dst = None):
         r"""
         Allows the user to call directly a method of the internal NN.
 
@@ -64,7 +64,7 @@ class AlraoModel(nn.Module):
         forwarded_method.__name__ = method_name_dst
         setattr(self, forwarded_method.__name__, forwarded_method)
 
-    def method_fwd_last_layers(self, method_name_src, method_name_dst=None):
+    def method_fwd_last_layers(self, method_name_src, method_name_dst = None):
         r"""
         Allows the user to call directly a method of the last layers.
 
@@ -127,28 +127,33 @@ class AlraoModel(nn.Module):
         if isinstance(z, tuple):
             z = x[0]
 
-        lst_logpx = [ll(z) for ll in self.last_layers()]
-        self.last_x, self.last_lst_logpx = z, lst_logpx
-        out = self.switch.forward(lst_logpx)
+        lst_ll_out = [ll(z) for ll in self.last_layers()]
+        self.last_x, self.last_lst_ll_out = z, lst_ll_out
+        out = self.switch.forward(lst_ll_out)
 
         if isinstance(x, tuple):
             out = (out,) + x[1:]
         return out
 
-    def update_switch(self, y, x=None, catch_up=False):
+    def update_switch(self, y, x = None, catch_up = False):
         """
         Updates the model averaging weights
+
+        Arguments: 
+            y: tensor of targets
+            x: tensor of outputs of the internal NN
+                if x is None, the stored outputs of the last layers are used
         """
         if x is None:
-            lst_px = self.last_lst_logpx
+            lst_ll_out = self.last_lst_ll_out
         else:
-            lst_px = [ll(x) for ll in self.last_layers()]
-        self.switch.Supdate(lst_px, y)
+            lst_ll_out = [ll(x) for ll in self.last_layers()]
+        self.switch.Supdate(lst_ll_out, y)
 
         if catch_up:
             self.hard_catch_up()
 
-    def hard_catch_up(self, threshold=-20):
+    def hard_catch_up(self, threshold = -20):
         """
         The hard catch up allows to reset all the last layers with low performance, and to
         set their weights to the best last layer ones. This can be done periodically during learning
@@ -193,7 +198,7 @@ class AlraoModel(nn.Module):
         """
         return self.switch.logposterior.exp()
 
-    def last_layers_predictions(self, x=None):
+    def last_layers_predictions(self, x = None):
         """
         Return all the predictions, for each last layer.
         If x is None, the last predictions are returned.

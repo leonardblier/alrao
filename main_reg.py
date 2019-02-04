@@ -231,10 +231,8 @@ def train(epoch):
         inputs = train_inputs[(i * batch_size):((i + 1) * batch_size)]
         targets = train_targets[(i * batch_size):((i + 1) * batch_size)]
         optimizer.zero_grad()
-        # inputs, targets = Variable(inputs), Variable(targets)
 
         outputs = net(inputs)
-        #print(outputs)
 
         loss = criterion_add(outputs, targets)
         loss.backward()
@@ -273,7 +271,7 @@ def test(epoch):
     for i in range(data_test_size // batch_size):
         inputs = test_inputs[(i * batch_size):((i + 1) * batch_size)]
         targets = test_targets[(i * batch_size):((i + 1) * batch_size)]
-        #inputs, targets = Variable(inputs, volatile=True), Variable(targets)
+
         outputs = net(inputs)
         loss = criterion_add(outputs, targets)
 

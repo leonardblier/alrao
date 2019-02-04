@@ -100,9 +100,9 @@ class L2LossAdditional(_Loss):
         if not torch.isfinite(means).all():
             raise ValueError
 
-        # means: batch_size * out_size * nb_classifiers
+        # means: batch_size * out_size * nb_last_layers
         means = means.transpose(2, 1).transpose(1, 0)
-        # means: nb_classifiers * batch_size * out_size
+        # means: nb_last_layers * batch_size * out_size
         log_probas_per_cl = -(means - target).pow(2).sum(2) / (2 * self.sigma2) - \
                 .5 * math.log(2 * math.pi * self.sigma2)
         # log_probas_per_cl: nb_classifiers * batch_size

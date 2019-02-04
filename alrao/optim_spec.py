@@ -14,6 +14,19 @@ import torch.optim as optim
 
 
 def alrao_step(net, optimizer, criterion, targets, catch_up = False, remove_non_numerical = True):
+    """
+    Perform an update step for a model learned with Alrao. The update is made assuming that
+    only one forward pass has been performed since the last update.
+
+    Arguments:
+        net: model to learn
+        optimizer: optimizer used
+        criterion: loss used over each last layer of 'net'
+        targets: the loss compares the stored output of each last layer of 'net' with 'targets'
+        catch_up: set to True to activate the 'catch_up' mode of Alrao
+        remove_non_numerical: if set to True, the gradients are not backpropagated from last 
+            layers with infinite output
+    """
     optimizer.last_layers_zero_grad()
     newx = net.last_x.detach()
     for last_layer in net.last_layers():
@@ -24,6 +37,21 @@ def alrao_step(net, optimizer, criterion, targets, catch_up = False, remove_non_
     optimizer.step()
     net.update_switch(targets, catch_up)
     optimizer.update_posterior(net.posterior())
+
+def sample_best_candidate(y):
+    """
+    Sample the most likely output among the outputs of an Alrao model.
+
+    Arguments:
+        y: tuple of 'outs' and 'ps':
+            outs: output of the NN,
+                tensor of size batch_size * output_size * nb_last_layers
+            ps: probabilities attributed by the model averaging method to each last layer
+                tensor of size nb_last_layers
+    """
+    outs, ps = y
+    _, i_max = ps.max(0)
+    return outs[:, :, i_max]
 
 
 class AdamSpec(optim.Optimizer):
