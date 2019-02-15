@@ -2,9 +2,11 @@
 Custom layers for Alrao
 """
 
+import math
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from .switch import log_sum_exp 
 
 
 class LinearClassifier(nn.Module):

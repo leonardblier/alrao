@@ -21,7 +21,7 @@ import numpy as np
 
 from models import GoogLeNet, MobileNetV2, VGG, SENet18
 from alrao.custom_layers import LinearClassifier, LinearRegressor, L2LossLog, L2LossAdditional
-from alrao.optim_spec import SGDAlrao, AdamAlrao
+from alrao.optim_spec import SGDAlrao, AdamAlrao, init_alrao_optimizer, alrao_step
 from alrao.learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
 from alrao.switch import log_sum_exp
 
@@ -87,16 +87,6 @@ sigma2 = 1.
 remove_non_numerical = True
 bound = math.pi
 func = lambda x: math.sin(x * bound)
-
-def is_numerical(x):
-    s = x.sum()
-    if (s == float('inf')).item():
-        return False
-    if (s == float('-inf')).item():
-        return False
-    if s != s:
-        return False
-    return True
 
 # Data
 def generate_data(f, input_dim, nb_data):
@@ -182,35 +172,13 @@ if use_cuda:
     net.cuda()
 
 if args.use_alrao:
-    if args.n_last_layers > 1:
-        last_layers_lr = [np.exp(
-            np.log(minlr) + k / (args.n_last_layers - 1) * (np.log(maxlr) - np.log(minlr))
-        ) for k in range(args.n_last_layers)]
-        print(("Classifiers LR:" + args.n_last_layers * "{:.1e}, ").format(*tuple(last_layers_lr)))
-    else:
-        last_layers_lr = [minlr]
-
-    lr_sampler = lr_sampler_generic(minlr, maxlr)
-    lr_internal_nn = generator_randomlr_neurons(net.internal_nn, lr_sampler)
-
-    if args.optimizer == 'SGD':
-        optimizer = SGDAlrao(net.parameters_internal_nn(),
-                             lr_internal_nn,
-                             net.last_layers_parameters_list(),
-                             last_layers_lr,
-                             momentum=args.momentum,
-                             weight_decay=args.weight_decay)
-    elif args.optimizer == 'Adam':
-        optimizer = AdamAlrao(net.parameters_internal_nn(),
-                              lr_internal_nn,
-                              net.last_layers_parameters_list(),
-                              last_layers_lr)
-
+    optimizer = init_alrao_optimizer(net, args.n_last_layers, minlr, maxlr, 
+            optim_name = args.optimizer, momentum = args.momentum, weight_decay = args.weight_decay)
 else:
     if args.optimizer == 'SGD':
-        optimizer = optim.SGD(net.parameters(), lr=base_lr)
+        optimizer = optim.SGD(net.parameters(), lr = base_lr)
     elif args.optimizer == 'Adam':
-        optimizer = optim.Adam(net.parameters(), lr=base_lr)
+        optimizer = optim.Adam(net.parameters(), lr = base_lr)
 
 
 # Training

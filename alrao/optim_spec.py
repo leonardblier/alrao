@@ -9,9 +9,38 @@ These optimizers are copies of the original pytorch optimizers with one change:
 """
 
 import math
+import numpy as np
 import torch
 import torch.optim as optim
+from .learningratesgen import lr_sampler_generic, generator_randomlr_neurons 
 
+
+def init_alrao_optimizer(net, n_last_layers, minlr, maxlr, optim_name = 'SGD', momentum = 0., weight_decay = 0.):
+    if n_last_layers > 1:
+        last_layers_lr = [np.exp(
+            np.log(minlr) + k / (n_last_layers - 1) * (np.log(maxlr) - np.log(minlr))
+        ) for k in range(n_last_layers)]
+        print(("Classifiers LR:" + n_last_layers * "{:.1e}, ").format(*tuple(last_layers_lr)))
+    else:
+        last_layers_lr = [minlr]
+
+    lr_sampler = lr_sampler_generic(minlr, maxlr)
+    lr_internal_nn = generator_randomlr_neurons(net.internal_nn, lr_sampler)
+
+    if optim_name == 'SGD':
+        optimizer = SGDAlrao(net.parameters_internal_nn(),
+                             lr_internal_nn,
+                             net.last_layers_parameters_list(),
+                             last_layers_lr,
+                             momentum = momentum,
+                             weight_decay = weight_decay)
+    elif optim_name == 'Adam':
+        optimizer = AdamAlrao(net.parameters_internal_nn(),
+                              lr_internal_nn,
+                              net.last_layers_parameters_list(),
+                              last_layers_lr)
+
+    return optimizer
 
 def alrao_step(net, optimizer, criterion, targets, catch_up = False, remove_non_numerical = True):
     """
@@ -35,7 +64,7 @@ def alrao_step(net, optimizer, criterion, targets, catch_up = False, remove_non_
             loss_last_layer.backward()
 
     optimizer.step()
-    net.update_switch(targets, catch_up)
+    net.update_switch(targets, catch_up = catch_up)
     optimizer.update_posterior(net.posterior())
 
 def sample_best_candidate(y):
@@ -44,10 +73,7 @@ def sample_best_candidate(y):
 
     Arguments:
         y: tuple of 'outs' and 'ps':
-            outs: output of the NN,
-                tensor of size batch_size * output_size * nb_last_layers
-            ps: probabilities attributed by the model averaging method to each last layer
-                tensor of size nb_last_layers
+            outs: tensor of size N * K
     """
     outs, ps = y
     _, i_max = ps.max(0)
