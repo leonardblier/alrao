@@ -70,8 +70,8 @@ parser.add_argument('--minlr', type=float, default=.001,
                     help='minimum LR in alrao (eta_min)')
 parser.add_argument('--maxlr', type=float, default=100.,
                     help='maximum LR in alrao (eta_max)')
-parser.add_argument('--nb_class', type=int, default=6,
-                    help='number of classifiers before the switch')
+parser.add_argument('--n_last_layers', type=int, default=1,
+                    help='number of last layers before the switch')
 
 args = parser.parse_args()
 
@@ -127,10 +127,11 @@ class StandardModel(nn.Module):
 preclassifier = RNNModel(model_name, ntokens, args.emsize, args.nhid,
                          args.nlayers, args.drop_out) #.to(device)
 if args.use_alrao:
-    net = AlraoModel(preclassifier, args.nb_class, LinearClassifierRNN, args.nhid, ntokens)
-    total_param = sum(np.prod(p.size()) for p in net.parameters_preclassifier())
+    net = AlraoModel(preclassifier, args.n_last_layers, LinearClassifierRNN, 
+            'classification', nn.NLLLoss(), args.nhid, ntokens)
+    total_param = sum(np.prod(p.size()) for p in net.parameters_internal_nn())
     total_param += sum(np.prod(p.size()) \
-                       for lcparams in net.classifiers_parameters_list() \
+                       for lcparams in net.last_layers_parameters_list() \
                        for p in lcparams)
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 else:
@@ -149,31 +150,8 @@ minlr = args.minlr
 maxlr = args.maxlr
 
 if args.use_alrao:
-    # Build the learning rates for each classifier
-    if args.nb_class > 1:
-        classifiers_lr = [np.exp(\
-                np.log(minlr) + k /(args.nb_class-1) * (np.log(maxlr) - np.log(minlr)) \
-                ) for k in range(args.nb_class)]
-        print(("Classifiers LR:" + args.nb_class * "{:.1e}, ").format(*tuple(classifiers_lr)))
-    else:
-        classifiers_lr = [minlr]
-
-    # Build the learning rates for the pre-classifier
-    lr_sampler = lr_sampler_generic(minlr, maxlr)
-    lr_preclassifier = generator_randomlr_neurons(net.preclassifier, lr_sampler)
-
-    if args.optimizer == 'SGD':
-        optimizer = SGDAlrao(net.parameters_preclassifier(),
-                              lr_preclassifier,
-                              net.classifiers_parameters_list(),
-                              classifiers_lr,
-                              momentum=args.momentum,
-                              weight_decay=args.weight_decay)
-    elif args.optimizer == 'Adam':
-        optimizer = AdamAlrao(net.parameters_preclassifier(),
-                               lr_preclassifier,
-                               net.classifiers_parameters_list(),
-                               classifiers_lr)
+    optimizer = init_alrao_optimizer(net, args.n_last_layers, minlr, maxlr, 
+            optim_name = args.optimizer, momentum = args.momentum, weight_decay = args.weight_decay)
 else:
     if args.optimizer == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr=base_lr)
@@ -216,13 +194,11 @@ def train(epoch):
         loss.backward()
 
         if args.use_alrao:
-            optimizer.classifiers_zero_grad()
-            newx = net.last_x.detach()
-            for classifier in net.classifiers():
-                loss_classifier = criterion(classifier(newx), targets)
-                loss_classifier.backward()
+            alrao_step(net, optimizer, criterion, targets, catch_up = (batch_idx % 20 == 0), remove_non_numerical = True) 
+        else:
+            optimizer.step()
 
-        torch.nn.utils.clip_grad_norm_(net.preclassifier.parameters(), args.clip)
+        torch.nn.utils.clip_grad_norm_(net.internal_nn.parameters(), args.clip)
         optimizer.step()
 
         _, predicted = torch.max(output.data, 1)
@@ -238,10 +214,6 @@ def train(epoch):
         if args.use_alrao:
             postfix["PostSw"] = net.repr_posterior()
         pbar.set_postfix(postfix)
-
-        if args.use_alrao:
-            net.update_switch(targets, catch_up=batch_idx % 20 == 0)
-            optimizer.update_posterior(net.posterior())
 
     pbar.close()
 

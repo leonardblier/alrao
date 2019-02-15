@@ -18,7 +18,7 @@ import numpy as np
 
 from models import GoogLeNet, MobileNetV2, VGG, SENet18
 from alrao.custom_layers import LinearClassifier
-from alrao.optim_spec import SGDAlrao, AdamAlrao
+from alrao.optim_spec import SGDAlrao, AdamAlrao, init_alrao_optimizer, alrao_step
 from alrao.learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
 
 from alrao.earlystopping import EarlyStopping
@@ -146,7 +146,6 @@ maxlr = 10 ** args.maxLR
 
 preclassifier = build_preclassifier(args.model_name, gamma=args.size_multiplier)
 if args.use_alrao:
-
     net = AlraoModel(preclassifier, args.nb_class, LinearClassifier,
                      preclassifier.linearinputdim, 10)
     total_param = sum(np.prod(p.size()) for p in net.parameters_preclassifier())
@@ -167,30 +166,8 @@ criterion = nn.NLLLoss()
 
 
 if args.use_alrao:
-    if args.nb_class > 1:
-        classifiers_lr = [np.exp(
-            np.log(minlr) + k / (args.nb_class-1) * (np.log(maxlr) - np.log(minlr))
-        ) for k in range(args.nb_class)]
-        print(("Classifiers LR:" + args.nb_class * "{:.1e}, ").format(*tuple(classifiers_lr)))
-    else:
-        classifiers_lr = [minlr]
-
-    lr_sampler = lr_sampler_generic(minlr, maxlr)
-    lr_preclassifier = generator_randomlr_neurons(net.preclassifier, lr_sampler)
-
-    if args.optimizer == 'SGD':
-        optimizer = SGDAlrao(net.parameters_preclassifier(),
-                             lr_preclassifier,
-                             net.classifiers_parameters_list(),
-                             classifiers_lr,
-                             momentum=args.momentum,
-                             weight_decay=args.weight_decay)
-    elif args.optimizer == 'Adam':
-        optimizer = AdamAlrao(net.parameters_preclassifier(),
-                              lr_preclassifier,
-                              net.classifiers_parameters_list(),
-                              classifiers_lr)
-
+    optimizer = init_alrao_optimizer(net, args.n_last_layers, minlr, maxlr, 
+            optim_name = args.optimizer, momentum = args.momentum, weight_decay = args.weight_decay)
 else:
     if args.optimizer == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr=base_lr)
@@ -224,13 +201,10 @@ def train(epoch):
         loss.backward()
 
         if args.use_alrao:
-            optimizer.classifiers_zero_grad()
-            newx = net.last_x.detach()
-            for classifier in net.classifiers():
-                loss_classifier = criterion(classifier(newx), targets)
-                loss_classifier.backward()
+            alrao_step(net, optimizer, criterion, targets, catch_up = False, remove_non_numerical = True) 
+        else:
+            optimizer.step()
 
-        optimizer.step()
         train_loss += loss.item()
         _, predicted = torch.max(outputs, 1)
         total += targets.size(0)
@@ -243,9 +217,6 @@ def train(epoch):
         # if args.use_alrao:
         #     postfix["PostSw"] = net.repr_posterior()
         pbar.set_postfix(postfix)
-        if args.use_alrao:
-            net.update_switch(targets, catch_up=False)
-            optimizer.update_posterior(net.posterior())
 
     pbar.close()
 
