@@ -20,9 +20,9 @@ from models import GoogLeNet, MobileNetV2, VGG, SENet18
 from alrao.custom_layers import LinearClassifier
 from alrao.optim_spec import SGDAlrao, AdamAlrao, init_alrao_optimizer, alrao_step
 from alrao.learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
-
 from alrao.earlystopping import EarlyStopping
 from alrao.alrao_model import AlraoModel
+
 # TO BE REMOVED
 from alrao.utils import Subset
 
@@ -62,7 +62,7 @@ parser.add_argument('--minLR', type=int, default=-5,
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
 parser.add_argument('--maxLR', type=int, default=0,
                     help='log10 of the maximum LR in alrao (log_10 eta_max)')
-parser.add_argument('--nb_class', type=int, default=10,
+parser.add_argument('--n_last_layers', type=int, default=10,
                     help='number of classifiers before the switch')
 parser.add_argument('--task', default='classification',
                     help='task to perform default: "classification" {"classification", "regression"}')
@@ -96,15 +96,15 @@ transform_test = transforms.Compose([
 ])
 
 # Train set
-DATA_DIR = './data'
+DATA_DIR = '/data_cifar'
 trainset = torchvision.datasets.CIFAR10(root=DATA_DIR, train=True,
-                                        download=True, transform=transform_train)
+                                        download=False, transform=transform_train)
 trainset = Subset(trainset, list(range(0, 40000)))
 trainloader = data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
 
 # Validation set
 validset = torchvision.datasets.CIFAR10(root=DATA_DIR, train=True,
-                                        download=True, transform=transform_test)
+                                        download=False, transform=transform_test)
 validset = Subset(validset, list(range(40000, 50000)))
 validloader = data.DataLoader(validset, batch_size=batch_size, shuffle=False, num_workers=2)
 
@@ -116,7 +116,7 @@ testloader = data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 
-def build_preclassifier(model_name, *args, **kwargs):
+def build_internal_nn(model_name, *args, **kwargs):
     if model_name == "VGG19":
         return VGG('VGG19')
     elif model_name == "GoogLeNet":
@@ -130,13 +130,13 @@ def build_preclassifier(model_name, *args, **kwargs):
 
 
 class StandardModel(nn.Module):
-    def __init__(self, preclassifier, K=1):
+    def __init__(self, internal_nn, K = 1):
         super(StandardModel, self).__init__()
-        self.preclassifier = preclassifier
-        self.classifier = LinearClassifier(self.preclassifier.linearinputdim, 10)
+        self.internal_nn = internal_nn
+        self.classifier = LinearClassifier(self.internal_nn.linearinputdim, 10)
 
     def forward(self, x):
-        x = self.preclassifier(x)
+        x = self.internal_nn(x)
         return self.classifier(x)
 
 
@@ -144,17 +144,17 @@ base_lr = args.lr
 minlr = 10 ** args.minLR
 maxlr = 10 ** args.maxLR
 
-preclassifier = build_preclassifier(args.model_name, gamma=args.size_multiplier)
+internal_nn = build_internal_nn(args.model_name, gamma = args.size_multiplier)
 if args.use_alrao:
-    net = AlraoModel(preclassifier, args.nb_class, LinearClassifier,
-                     preclassifier.linearinputdim, 10)
-    total_param = sum(np.prod(p.size()) for p in net.parameters_preclassifier())
+    net = AlraoModel(internal_nn, args.n_last_layers, LinearClassifier,
+            'classification', nn.NLLLoss(), internal_nn.linearinputdim, 10)
+    total_param = sum(np.prod(p.size()) for p in net.parameters_internal_nn())
     total_param += sum(np.prod(p.size())
-                       for lcparams in net.classifiers_parameters_list()
+                       for lcparams in net.last_layers_parameters_list()
                        for p in lcparams)
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 else:
-    net = StandardModel(preclassifier)
+    net = StandardModel(internal_nn)
     total_param = sum(np.prod(p.size()) for p in net.parameters())
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 
@@ -178,9 +178,11 @@ else:
 # Training
 def train(epoch):
     net.train()
+    """
     if args.use_alrao:
-        optimizer.update_posterior(net.posterior())
-        net.switch.reset_cl_perf()
+        optimizer.update_posterior(net.posterior()) # useless beacause this action is already performed in 'alrao_step'
+        net.switch.reset_ll_perf() # useless when save_ll_perf is False
+    """
     train_loss = 0
     correct = 0
     total = 0
@@ -221,10 +223,10 @@ def train(epoch):
     pbar.close()
 
     if args.use_alrao:
-        cl_perf = net.switch.get_cl_perf()
-        for k in range(len(cl_perf)):
+        ll_perf = net.switch.get_ll_perf()
+        for k in range(len(ll_perf)):
             print("Classifier {}\t LossTrain:{:.6f}\tAccTrain:{:.4f}".format(
-                k, cl_perf[k][0], cl_perf[k][1]))
+                k, ll_perf[k][0], ll_perf[k][1]))
 
     return train_loss / (batch_idx + 1), correct / total
 
@@ -233,7 +235,7 @@ def test(epoch, loader):
     global best_acc
     net.eval()
     if args.use_alrao:
-        net.switch.reset_cl_perf()
+        net.switch.reset_ll_perf()
     test_loss = 0
     correct = 0
     total = 0
@@ -251,7 +253,7 @@ def test(epoch, loader):
 
     print('\tLossTest: %.4f\tAccTest: %.3f' % (test_loss/(batch_idx+1), 100.*correct/total))
     if args.use_alrao:
-        print(("Posterior : "+"{:.1e}, " * args.nb_class).format(*net.posterior()))
+        print(("Posterior : "+"{:.1e}, " * args.n_last_layers).format(*net.posterior()))
 
     return test_loss / (batch_idx + 1), correct / total
 

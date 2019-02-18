@@ -13,9 +13,10 @@ from tqdm import tqdm
 import numpy as np
 
 from models import RNNModel
-from alrao import AlraoModel, LinearClassifierRNN
-from alrao import SGDAlrao, AdamAlrao
-from alrao import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
+from alrao.alrao_model import AlraoModel
+from alrao.custom_layers import LinearClassifierRNN
+from alrao.optim_spec import SGDAlrao, AdamAlrao, init_alrao_optimizer, alrao_step
+from alrao.learningratesgen import lr_sampler_generic, generator_randomlr_neurons, generator_randomlr_weights
 from alrao.earlystopping import EarlyStopping
 
 import data.data_text as data_text
@@ -106,13 +107,13 @@ test_data = batchify(corpus.test, eval_batch_size)
 
 # Build model
 class StandardModel(nn.Module):
-    def __init__(self, preclassifier, classifier, *args, **kwargs):
+    def __init__(self, internal_nn, classifier, *args, **kwargs):
         super(StandardModel, self).__init__()
-        self.preclassifier = preclassifier
+        self.internal_nn = internal_nn
         self.classifier = classifier(*args, **kwargs) #.to(device)
 
     def forward(self, *args, **kwargs):
-        x = self.preclassifier(*args, **kwargs)
+        x = self.internal_nn(*args, **kwargs)
 
         z = x
         if isinstance(z, tuple):
@@ -124,10 +125,10 @@ class StandardModel(nn.Module):
             out = (out,) + x[1:]
         return out
 
-preclassifier = RNNModel(model_name, ntokens, args.emsize, args.nhid,
+internal_nn = RNNModel(model_name, ntokens, args.emsize, args.nhid,
                          args.nlayers, args.drop_out) #.to(device)
 if args.use_alrao:
-    net = AlraoModel(preclassifier, args.n_last_layers, LinearClassifierRNN, 
+    net = AlraoModel(internal_nn, args.n_last_layers, LinearClassifierRNN, 
             'classification', nn.NLLLoss(), args.nhid, ntokens)
     total_param = sum(np.prod(p.size()) for p in net.parameters_internal_nn())
     total_param += sum(np.prod(p.size()) \
@@ -135,7 +136,7 @@ if args.use_alrao:
                        for p in lcparams)
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 else:
-    net = StandardModel(preclassifier, LinearClassifierRNN, args.nhid, ntokens)
+    net = StandardModel(internal_nn, LinearClassifierRNN, args.nhid, ntokens)
     total_param = sum(np.prod(p.size()) for p in net.parameters())
     print("Number of parameters : {:.3f}M".format(total_param / 1000000))
 
@@ -168,15 +169,17 @@ def get_batch(source, i):
 log_interval = 200
 def train(epoch):
     net.train()
+    """
     if args.use_alrao:
-        optimizer.update_posterior(net.posterior())
-        net.switch.reset_cl_perf()
+        optimizer.update_posterior(net.posterior()) # useless beacause this action is already performed in 'alrao_step'
+        net.switch.reset_ll_perf() # useless when save_ll_perf is False
+    """
     total_loss = 0.
     epoch_loss = 0.
     correct = 0
     total_pred = 0
     start_time = time.time()
-    current, hidden = net.preclassifier.init_hidden(batch_size)
+    current, hidden = net.internal_nn.init_hidden(batch_size)
 
     pbar = tqdm(total = train_data.size(0),
                 bar_format = '{l_bar}{bar}| {n_fmt}/{total_fmt} {postfix}')
@@ -218,22 +221,22 @@ def train(epoch):
     pbar.close()
 
     if args.use_alrao:
-        cl_perf = net.switch.get_cl_perf()
-        for k in range(len(cl_perf)):
+        ll_perf = net.switch.get_ll_perf()
+        for k in range(len(ll_perf)):
             print("Classifier {}\t LossTrain:{:.6f}\tAccTrain:{:.4f}".format(
-                k, cl_perf[k][0], cl_perf[k][1]))
+                k, ll_perf[k][0], ll_perf[k][1]))
 
     return epoch_loss / (batch_idx + 1), correct / total_pred
 
 def test(epoch, loader):
     net.eval()
     if args.use_alrao:
-        net.switch.reset_cl_perf()
+        net.switch.reset_ll_perf()
     total_loss = 0.
     correct = 0
     total_pred = 0
     ntokens = len(corpus.dictionary)
-    hidden, current = net.preclassifier.init_hidden(eval_batch_size)
+    hidden, current = net.internal_nn.init_hidden(eval_batch_size)
     with torch.no_grad():
         for i in range(0, loader.size(0) - 1, args.bptt):
             data, targets = get_batch(loader, i)
@@ -248,7 +251,7 @@ def test(epoch, loader):
 
     print('\tLossTest: %.4f\tAccTest: %.3f' % (total_loss / len(loader), 100. * correct / total_pred))
     if args.use_alrao:
-        print(("Posterior : "+"{:.1e}, " * args.nb_class).format(*net.posterior()))
+        print(("Posterior : "+"{:.1e}, " * args.n_last_layers).format(*net.posterior()))
 
     return total_loss / len(loader), correct / total_pred
 

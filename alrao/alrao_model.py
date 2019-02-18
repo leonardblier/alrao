@@ -120,12 +120,13 @@ class AlraoModel(nn.Module):
             *args, **kwargs: arguments to be passed to the forward method of the internal NN
         """
         x = self.internal_nn(*args, **kwargs)
-        if not torch.isfinite(x).all():
-            raise ValueError
 
         z = x
         if isinstance(z, tuple):
             z = x[0]
+
+        if not torch.isfinite(z).all():
+            raise ValueError
 
         lst_ll_out = [ll(z) for ll in self.last_layers()]
         self.last_x, self.last_lst_ll_out = z, lst_ll_out
