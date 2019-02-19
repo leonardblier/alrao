@@ -9,13 +9,80 @@ These optimizers are copies of the original pytorch optimizers with one change:
 """
 
 import math
+import numpy as np
 import torch
 import torch.optim as optim
+from .learningratesgen import lr_sampler_generic, generator_randomlr_neurons 
+
+
+def init_alrao_optimizer(net, n_last_layers, minlr, maxlr, optim_name = 'SGD', momentum = 0., weight_decay = 0.):
+    if n_last_layers > 1:
+        last_layers_lr = [np.exp(
+            np.log(minlr) + k / (n_last_layers - 1) * (np.log(maxlr) - np.log(minlr))
+        ) for k in range(n_last_layers)]
+        print(("Classifiers LR:" + n_last_layers * "{:.1e}, ").format(*tuple(last_layers_lr)))
+    else:
+        last_layers_lr = [minlr]
+
+    lr_sampler = lr_sampler_generic(minlr, maxlr)
+    lr_internal_nn = generator_randomlr_neurons(net.internal_nn, lr_sampler)
+
+    if optim_name == 'SGD':
+        optimizer = SGDAlrao(net.parameters_internal_nn(),
+                             lr_internal_nn,
+                             net.last_layers_parameters_list(),
+                             last_layers_lr,
+                             momentum = momentum,
+                             weight_decay = weight_decay)
+    elif optim_name == 'Adam':
+        optimizer = AdamAlrao(net.parameters_internal_nn(),
+                              lr_internal_nn,
+                              net.last_layers_parameters_list(),
+                              last_layers_lr)
+
+    return optimizer
+
+def alrao_step(net, optimizer, criterion, targets, catch_up = False, remove_non_numerical = True):
+    """
+    Perform an update step for a model learned with Alrao. The update is made assuming that
+    only one forward pass has been performed since the last update.
+
+    Arguments:
+        net: model to learn
+        optimizer: optimizer used
+        criterion: loss used over each last layer of 'net'
+        targets: the loss compares the stored output of each last layer of 'net' with 'targets'
+        catch_up: set to True to activate the 'catch_up' mode of Alrao
+        remove_non_numerical: if set to True, the gradients are not backpropagated from last 
+            layers with infinite output
+    """
+    optimizer.last_layers_zero_grad()
+    newx = net.last_x.detach()
+    for last_layer in net.last_layers():
+        loss_last_layer = criterion(last_layer(newx), targets)
+        if torch.isfinite(loss_last_layer).all() or (not remove_non_numerical): 
+            loss_last_layer.backward()
+
+    optimizer.step()
+    net.update_switch(targets, catch_up = catch_up)
+    optimizer.update_posterior(net.posterior())
+
+def sample_best_candidate(y):
+    """
+    Sample the most likely output among the outputs of an Alrao model.
+
+    Arguments:
+        y: tuple of 'outs' and 'ps':
+            outs: tensor of size N * K
+    """
+    outs, ps = y
+    _, i_max = ps.max(0)
+    return outs[:, :, i_max]
 
 
 class AdamSpec(optim.Optimizer):
     """
-    Adam modification for the preclassifier with Alrao
+    Adam modification for the internal NN with Alrao
 
     Arguments:
         params: Iterator over the parameters
@@ -98,7 +165,7 @@ class AdamSpec(optim.Optimizer):
 
 class SGDSpec(optim.Optimizer):
     """
-    SGD modification for the preclassifier with Alrao
+    SGD modification for the internal NN with Alrao
 
     Arguments:
         params: Iterator over the parameters
@@ -232,8 +299,6 @@ class SGDRandDirWeightsSpec(optim.Optimizer):
                 p.data.add(-1, update.view(size))
 
 
-
-
 class OptAlrao:
     """
     Generic class for Alrao's optimisation methods.
@@ -245,19 +310,19 @@ class OptAlrao:
         self.posterior = posterior
 
     def step(self):
-        if self.optpreclassifier is not None:
-            self.optpreclassifier.step()
-        for optclassifier in self.optclassifiers:
-            optclassifier.step()
+        if self.opt_internal_nn is not None:
+            self.opt_internal_nn.step()
+        for opt_last_layer in self.opt_last_layers:
+            opt_last_layer.step()
 
-    def classifiers_zero_grad(self):
-        for opt in self.optclassifiers:
+    def last_layers_zero_grad(self):
+        for opt in self.opt_last_layers:
             opt.zero_grad()
 
     def zero_grad(self):
-        if self.optpreclassifier is not None:
-            self.optpreclassifier.zero_grad()
-        for opt in self.optclassifiers:
+        if self.opt_internal_nn is not None:
+            self.opt_internal_nn.zero_grad()
+        for opt in self.opt_last_layers:
             opt.zero_grad()
 
 
@@ -265,39 +330,39 @@ class SGDAlrao(OptAlrao):
     """
     Alrao-SGD optimisation method.
     Arguments:
-        parameters_preclassifiers: iterator over the preclassifier parameters
-        lr_preclassifier: Iterator over the preclassifier learning rates
-        classifier_parameters_list: List of iterators over each classifier parameters
-        classifiers_lr: List of iterators over each classifier learning rates
+        parameters_internal_nn: iterator over the internal NN parameters
+        lr_internal_nn: Iterator over the internal NN learning rates
+        last_layer_parameters_list: List of iterators over each last_layer parameters
+        last_layers_lr: List of iterators over each last layer learning rates
         other: as normal SGD
     """
-    def __init__(self, parameters_preclassifier, lr_preclassifier, classifiers_parameters_list,
-                 classifiers_lr, momentum=0., weight_decay=0.):
+    def __init__(self, parameters_internal_nn, lr_internal_nn, last_layers_parameters_list,
+                 last_layers_lr, momentum=0., weight_decay=0.):
 
         super(SGDAlrao, self).__init__()
-        self.optpreclassifier = SGDSpec(parameters_preclassifier, lr_preclassifier,
+        self.opt_internal_nn = SGDSpec(parameters_internal_nn, lr_internal_nn,
                                         momentum=momentum, weight_decay=weight_decay)
-        self.classifiers_lr = classifiers_lr
-        self.optclassifiers = \
+        self.last_layers_lr = last_layers_lr
+        self.opt_last_layers = \
             [optim.SGD(parameters, lr, momentum=momentum, weight_decay=weight_decay) \
-             for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
+             for parameters, lr in zip(last_layers_parameters_list, last_layers_lr)]
 
 
 class AdamAlrao(OptAlrao):
     """
     Alrao-SGD optimisation method.
     Arguments:
-        parameters_preclassifiers: iterator over the preclassifier parameters
-        lr_preclassifier: Iterator over the preclassifier learning rates
-        classifier_parameters_list: List of iterators over each classifier parameters
-        classifiers_lr: List of iterators over each classifier learning rates
+        parameters_internal_nn: iterator over the internal NN parameters
+        lr_internal_nn: Iterator over the internal NN learning rates
+        last_layer_parameters_list: List of iterators over each last layer parameters
+        last_layers_lr: List of iterators over each last layer learning rates
         other: as normal Adam
     """
-    def __init__(self, parameters_preclassifier, lr_preclassifier, classifiers_parameters_list,
-                 classifiers_lr, **kwargs):
+    def __init__(self, parameters_internal_nn, lr_internal_nn, last_layers_parameters_list,
+                 last_layers_lr, **kwargs):
 
         super(AdamAlrao, self).__init__()
 
-        self.optpreclassifier = AdamSpec(parameters_preclassifier, lr_preclassifier, **kwargs)
-        self.optclassifiers = [optim.Adam(parameters, lr, **kwargs) \
-             for parameters, lr in zip(classifiers_parameters_list, classifiers_lr)]
+        self.opt_internal_nn = AdamSpec(parameters_internal_nn, lr_internal_nn, **kwargs)
+        self.opt_last_layers = [optim.Adam(parameters, lr, **kwargs) \
+             for parameters, lr in zip(last_layers_parameters_list, last_layers_lr)]
