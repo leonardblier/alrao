@@ -40,6 +40,8 @@ parser.add_argument('--early_stopping', action='store_true', default=False,
                     help='use early stopping')
 
 # options
+parser.add_argument('--data_path', default='./data',
+                    help='path to the dataset')
 parser.add_argument('--model_name', default='GoogLeNet',
                     help='Model {VGG19, GoogLeNet, MobileNetV2, SENet18}')
 parser.add_argument('--optimizer', default='SGD',
@@ -96,7 +98,7 @@ transform_test = transforms.Compose([
 ])
 
 # Train set
-DATA_DIR = '/data_cifar'
+DATA_DIR = args.data_path
 trainset = torchvision.datasets.CIFAR10(root=DATA_DIR, train=True,
                                         download=False, transform=transform_train)
 trainset = Subset(trainset, list(range(0, 40000)))
@@ -110,7 +112,7 @@ validloader = data.DataLoader(validset, batch_size=batch_size, shuffle=False, nu
 
 # Test set
 testset = torchvision.datasets.CIFAR10(root=DATA_DIR, train=False,
-                                       download=True, transform=transform_test)
+                                       download=False, transform=transform_test)
 testloader = data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
