@@ -169,11 +169,11 @@ def get_batch(source, i):
 log_interval = 200
 def train(epoch):
     net.train()
-    """
+
     if args.use_alrao:
-        optimizer.update_posterior(net.posterior()) # useless beacause this action is already performed in 'alrao_step'
+        #optimizer.update_posterior(net.posterior()) # useless beacause this action is already performed in 'alrao_step'
         net.switch.reset_ll_perf() # useless when save_ll_perf is False
-    """
+
     total_loss = 0.
     epoch_loss = 0.
     correct = 0
