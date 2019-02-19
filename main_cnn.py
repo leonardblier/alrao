@@ -178,9 +178,9 @@ else:
 # Training
 def train(epoch):
     net.train()
-    
+   
     if args.use_alrao:
-        optimizer.update_posterior(net.posterior()) # useless beacause this action is already performed in 'alrao_step'
+        #optimizer.update_posterior(net.posterior()) # useless beacause this action is already performed in 'alrao_step'
         net.switch.reset_ll_perf() # useless when save_ll_perf is False
     
     train_loss = 0
@@ -234,8 +234,10 @@ def train(epoch):
 def test(epoch, loader):
     global best_acc
     net.eval()
+
     if args.use_alrao:
         net.switch.reset_ll_perf()
+
     test_loss = 0
     correct = 0
     total = 0
