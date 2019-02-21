@@ -18,7 +18,7 @@ class AlraoModel(nn.Module):
             the option 'size_average = True' returns the averaged loss
         *args, **kwargs: arguments to be passed to the constructor of 'last_layer_gen'
     """
-    def __init__(self, internal_nn, n_last_layers, last_layer_gen, task, loss, *args, **kwargs):
+    def __init__(self, task, loss, internal_nn, n_last_layers, last_layer_gen, *args, **kwargs):
         super(AlraoModel, self).__init__()
         self.task = task
         self.loss = loss

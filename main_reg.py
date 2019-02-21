@@ -153,8 +153,9 @@ internal_nn = build_internal_nn(args.model_name, input_dim, pre_output_dim)
 criterion = L2LossLog(sigma2 = sigma2)
 criterion_add = L2LossAdditional(sigma2 = sigma2)
 if args.use_alrao:
-    net = AlraoModel(internal_nn, args.n_last_layers, LinearRegressor,
-                     'regression', criterion, internal_nn.linearinputdim, 1)
+    net = AlraoModel('regression', criterion, 
+            internal_nn, args.n_last_layers, LinearRegressor,
+            internal_nn.linearinputdim, 1)
     total_param = sum(np.prod(p.size()) for p in net.parameters_internal_nn())
     total_param += sum(np.prod(p.size())
                        for lcparams in net.last_layers_parameters_list()

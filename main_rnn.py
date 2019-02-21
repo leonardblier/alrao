@@ -128,8 +128,9 @@ class StandardModel(nn.Module):
 internal_nn = RNNModel(model_name, ntokens, args.emsize, args.nhid,
                          args.nlayers, args.drop_out) #.to(device)
 if args.use_alrao:
-    net = AlraoModel(internal_nn, args.n_last_layers, LinearClassifierRNN, 
-            'classification', nn.NLLLoss(), args.nhid, ntokens)
+    net = AlraoModel('classification', nn.NLLLoss(), 
+            internal_nn, args.n_last_layers, LinearClassifierRNN, 
+            args.nhid, ntokens)
     total_param = sum(np.prod(p.size()) for p in net.parameters_internal_nn())
     total_param += sum(np.prod(p.size()) \
                        for lcparams in net.last_layers_parameters_list() \

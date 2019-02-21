@@ -148,8 +148,9 @@ maxlr = 10 ** args.maxLR
 
 internal_nn = build_internal_nn(args.model_name, gamma = args.size_multiplier)
 if args.use_alrao:
-    net = AlraoModel(internal_nn, args.n_last_layers, LinearClassifier,
-            'classification', nn.NLLLoss(), internal_nn.linearinputdim, 10)
+    net = AlraoModel('classification', nn.NLLLoss(), 
+            internal_nn, args.n_last_layers, LinearClassifier,
+            internal_nn.linearinputdim, 10)
     total_param = sum(np.prod(p.size()) for p in net.parameters_internal_nn())
     total_param += sum(np.prod(p.size())
                        for lcparams in net.last_layers_parameters_list()
