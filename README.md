@@ -32,12 +32,12 @@ The main options are:
   --use_alrao           multiple learning rates
   --minLR MINLR         log10 of the minimum LR in alrao (log_10 eta_min)
   --maxLR MAXLR         log10 of the maximum LR in alrao (log_10 eta_max)
-  --nb_class NB_CLASS   number of classifiers used in Alrao (default 10)
+  --n_last_layers N_LL  number of last layers (e. g. classifiers) used in Alrao (default 10)
 ```
 More options are available. Check it by running `python main_cnn.py --help`.
 For example, to use the script with Alrao on the interval (10**-5, 10) with GoogLeNet, run:
 ```
-python main_cnn.py --use_alrao --minLR -5 --maxLR 1 --nb_class 10 --model_name GoogLeNet
+python main_cnn.py --use_alrao --minLR -5 --maxLR 1 --n_last_layers 10 --model_name GoogLeNet
 ```
 
 If you want to train the same model but with SGD with a learning rate 10**-3, run:
@@ -63,12 +63,13 @@ Note: in the code, the loss is computed with the natural logarithm, and not with
 
 ### Custom models
 
-Custom models can be used with some modifications.
+Custom models can be used with some modifications. We give here an example in the case of a classification task with the negative log-likelihood loss.
 
 First, the custom model has to be split into a pre-classifier class (e.g. `PreClassif`) and a classifier class (e.g. `Classif`) in order to be integrated into the class `AlraoModel`. Note that the classifier is supposed to return log-probabilities. Once done, an instance of `AlraoModel` can be created with:
 ```python
 preclassif = PreClassif(<args_of_the_preclassifier>)
-alrao_model = AlraoModel(preclassif, nb_classifiers, Classif, <args_of_the_classifiers>)
+alrao_model = AlraoModel('classification', torch.nn.NLLLoss(), 
+                         preclassif, nb_classifiers, Classif, <args_of_the_classifiers>)
 ```
 
 Then the `forward` method of the pre-classifier is assumed to return either one value or a tuple. If a tuple `(x, a, b, ...)` is returned, the first element `x` is supposed to be taken as input of the classifiers. Their outputs are then averaged with a model averaging method (here, the `Switch` class), which returns `y`. Thus, the `forward` method of `AlraoModel` returns a tuple `(y, a, b, ...)`.
