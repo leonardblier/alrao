@@ -73,6 +73,8 @@ parser.add_argument('--maxlr', type=float, default=100.,
                     help='maximum LR in alrao (eta_max)')
 parser.add_argument('--n_last_layers', type=int, default=1,
                     help='number of last layers before the switch')
+parser.add_argument('--catch_up', type=int, default=-1,
+                    help='catch-up period')
 
 args = parser.parse_args()
 
@@ -115,15 +117,11 @@ class StandardModel(nn.Module):
     def forward(self, *args, **kwargs):
         x = self.internal_nn(*args, **kwargs)
 
-        z = x
-        if isinstance(z, tuple):
-            z = x[0]
-
-        out = self.classifier(z)
-
         if isinstance(x, tuple):
-            out = (out,) + x[1:]
-        return out
+            x_0 = self.classifier(x[0])
+            return (x_0,) + x[1:]
+        else:
+            return self.classifier(x)
 
 internal_nn = RNNModel(model_name, ntokens, args.emsize, args.nhid,
                          args.nlayers, args.drop_out) #.to(device)
@@ -197,13 +195,12 @@ def train(epoch):
         loss = criterion(output, targets)
         loss.backward()
 
+        torch.nn.utils.clip_grad_norm_(net.internal_nn.parameters(), args.clip)
         if args.use_alrao:
-            alrao_step(net, optimizer, criterion, targets, catch_up = (batch_idx % 20 == 0), remove_non_numerical = True) 
+            catch_up = (args.catch_up != -1 and batch_idx % args.catch_up == 0)
+            alrao_step(net, optimizer, criterion, targets, catch_up = catch_up, remove_non_numerical = True)
         else:
             optimizer.step()
-
-        torch.nn.utils.clip_grad_norm_(net.internal_nn.parameters(), args.clip)
-        optimizer.step()
 
         _, predicted = torch.max(output.data, 1)
         total_pred += targets.size(0)

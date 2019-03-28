@@ -36,7 +36,7 @@ class RNNModel(nn.Module):
         emb = self.drop(self.encoder(input))
         output, (new_hidden, new_current) = self.rnn(emb, (hidden, current))
         output = self.drop(output)
-        return output, hidden, current
+        return output, new_hidden, new_current
 
     def init_hidden(self, bsz):
         weight = next(self.parameters())
