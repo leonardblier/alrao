@@ -58,7 +58,7 @@ parser.add_argument('--size_multiplier', type=int, default=1,
                     help='multiplier of the number of neurons per layer (default: 1)')
 
 # Alrao Parameters
-parser.add_argument('--use_alrao', action='store_true', default=True,
+parser.add_argument('--use_alrao', action='store_true', default=False, #default=True
                     help='multiple learning rates')
 parser.add_argument('--minLR', type=int, default=-5,
                     help='log10 of the minimum LR in alrao (log_10 eta_min)')
